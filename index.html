@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RENO.ai – 施工後イメージ生成</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0e0e0e;
+    font-family: 'DM Sans', 'Hiragino Sans', sans-serif;
+    color: #f0ede8;
+  }
+  ::placeholder { color: #555; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #111; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  /* Layout */
+  .container { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  /* Header */
+  .header { margin-bottom: 28px; }
+  .logo { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .logo-text { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .logo-badge {
+    font-size: 11px; color: #c8a96e; font-weight: 500; letter-spacing: 0.15em;
+    border: 1px solid #c8a96e; padding: 2px 7px; border-radius: 3px;
+  }
+  .tagline { color: #666; font-size: 13px; letter-spacing: 0.02em; }
+  .divider { height: 1px; background: linear-gradient(to right, #2a2a2a, transparent); margin-top: 20px; }
+
+  /* Section */
+  .section { margin-bottom: 26px; }
+  .section-label {
+    font-size: 11px; color: #666; letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; margin-bottom: 8px;
+  }
+
+  /* Inputs */
+  .key-wrap { position: relative; }
+  .key-input, .prompt-input {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #f0ede8; font-size: 13px; padding: 10px 14px; width: 100%;
+    outline: none; transition: border-color 0.2s; font-family: inherit;
+  }
+  .key-input { padding-right: 60px; }
+  .key-input:focus, .prompt-input:focus { border-color: #c8a96e; }
+  .prompt-input { resize: vertical; min-height: 70px; }
+  .key-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #555; cursor: pointer; font-size: 12px;
+  }
+  .key-note { font-size: 11px; color: #444; margin-top: 5px; }
+
+  /* Upload */
+  .upload-zone {
+    border: 1.5px dashed #333; border-radius: 12px; cursor: pointer;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: #c8a96e; background: rgba(200,169,110,0.04); }
+  .upload-placeholder { padding: 40px 24px; text-align: center; }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-text { font-size: 14px; color: #555; }
+  .upload-sub { font-size: 12px; color: #3a3a3a; margin-top: 4px; }
+  .upload-preview { width: 100%; display: block; max-height: 340px; object-fit: cover; border-radius: 10px; }
+  .upload-change {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.7); border: none; color: #f0ede8;
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
+  }
+
+  /* Presets */
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .preset-btn {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 10px 14px; cursor: pointer; transition: all 0.15s;
+    color: #ccc; font-size: 13px; text-align: left; line-height: 1.4;
+    font-family: inherit;
+  }
+  .preset-btn:hover { border-color: #c8a96e; color: #f0ede8; background: #1f1d1a; }
+  .preset-btn.active { border-color: #c8a96e; background: #1f1d1a; color: #c8a96e; }
+
+  /* Error */
+  .error-box {
+    background: #1a0f0f; border: 1px solid #5a2020; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 20px; font-size: 13px; color: #e08080;
+  }
+
+  /* Generate button */
+  .gen-btn {
+    background: linear-gradient(135deg, #c8a96e, #a07840);
+    border: none; border-radius: 10px; color: #0e0e0e;
+    font-weight: 500; font-size: 15px; padding: 14px 32px;
+    cursor: pointer; width: 100%; transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.03em; font-family: inherit;
+  }
+  .gen-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Loading */
+  .loading { text-align: center; margin-top: 32px; }
+  .spinner {
+    width: 28px; height: 28px; border: 2px solid #333; border-top-color: #c8a96e;
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: #555; font-size: 13px; margin-top: 12px; }
+
+  /* Result */
+  .result { margin-top: 36px; animation: fadeIn 0.5s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .result-label { font-size: 11px; color: #c8a96e; letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 14px; }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .compare-item { position: relative; }
+  .compare-img { width: 100%; border-radius: 10px; display: block; max-height: 280px; object-fit: cover; }
+  .img-tag {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.7); font-size: 11px;
+    padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .tag-before { color: #c8a96e; }
+  .tag-after { color: #7fd99a; }
+  .result-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .dl-btn {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #c8a96e; font-size: 13px; padding: 9px 18px;
+    text-decoration: none; display: inline-block; transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .retry-btn {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #888; font-size: 13px; padding: 9px 18px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  @media (max-width: 560px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .preset-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-text">RENO</span>
+      <span class="logo-badge">AI</span>
+    </div>
+    <p class="tagline">施工後のイメージを、今すぐ確認</p>
+    <div class="divider"></div>
+  </div>
+
+  <!-- API Key -->
+  <div class="section">
+    <label class="section-label">OpenAI API Key</label>
+    <div class="key-wrap">
+      <input type="password" id="apiKey" class="key-input" placeholder="sk-...">
+      <button class="key-toggle" onclick="toggleKey()">表示</button>
+    </div>
+    <p class="key-note">※ キーはブラウザ外に送信されません</p>
+  </div>
+
+  <!-- Upload -->
+  <div class="section">
+    <label class="section-label">現状の写真</label>
+    <div class="upload-zone" id="uploadZone" onclick="triggerUpload()" ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave()">
+      <div class="upload-placeholder" id="uploadPlaceholder">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">クリックまたはドラッグ＆ドロップ</div>
+        <div class="upload-sub">JPG / PNG</div>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
+  </div>
+
+  <!-- Presets -->
+  <div class="section">
+    <label class="section-label">施工プリセット</label>
+    <div class="preset-grid" id="presetGrid"></div>
+  </div>
+
+  <!-- Custom Prompt -->
+  <div class="section">
+    <label class="section-label">カスタム指示（英語推奨）</label>
+    <textarea id="promptInput" class="prompt-input" placeholder="例: Change the floor to dark walnut wood, keep everything else the same..."></textarea>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox" style="display:none"></div>
+
+  <!-- Generate -->
+  <button class="gen-btn" id="genBtn" onclick="generate()">施工後イメージを生成</button>
+
+  <!-- Loading -->
+  <div class="loading" id="loadingBox" style="display:none">
+    <div class="spinner"></div>
+    <p class="loading-text">AIがリフォーム後のイメージを生成しています...</p>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="resultBox" style="display:none">
+    <div class="divider" style="margin-bottom:24px"></div>
+    <span class="result-label">✦ 施工後イメージ</span>
+    <div class="compare-grid">
+      <div class="compare-item">
+        <span class="img-tag tag-before">Before</span>
+        <img id="beforeImg" class="compare-img" src="" alt="before">
+      </div>
+      <div class="compare-item">
+        <span class="img-tag tag-after">After</span>
+        <img id="afterImg" class="compare-img" src="" alt="after">
+      </div>
+    </div>
+    <div class="result-actions">
+      <a id="dlBtn" class="dl-btn" href="#" download="reno-ai-result.png">↓ ダウンロード</a>
+      <button class="retry-btn" onclick="resetResult()">↩ やり直す</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PRESETS = [
+  { label: "🪵 床材をライトオーク無垢材に", prompt: "Change the floor to light oak hardwood. Keep all furniture, walls, and ceiling exactly the same. Photorealistic interior design." },
+  { label: "🧱 壁をコンクリート打ちっぱなしに", prompt: "Change the walls to exposed concrete texture. Keep floor, furniture, and ceiling exactly the same. Photorealistic modern interior." },
+  { label: "🤍 壁紙をホワイトマットに", prompt: "Change all walls to clean matte white paint. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior." },
+  { label: "🔷 床をヘリンボーンタイルに", prompt: "Change the floor to herringbone ceramic tile pattern in light beige. Keep furniture, walls, and ceiling exactly the same. Photorealistic." },
+  { label: "🍳 モダンなキッチンに変更", prompt: "Transform into a modern minimalist kitchen with handleless cabinets in matte white, marble countertops, and integrated appliances. Keep overall room structure." },
+  { label: "🌊 壁を深いネイビーブルーに", prompt: "Paint all walls deep navy blue. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior design." },
+];
+
+let currentImageFile = null;
+let currentImageURL = null;
+let activePreset = null;
+
+// Render presets
+const grid = document.getElementById('presetGrid');
+PRESETS.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn';
+  btn.textContent = p.label;
+  btn.onclick = () => selectPreset(i, btn, p.prompt);
+  grid.appendChild(btn);
+});
+
+function selectPreset(i, btn, prompt) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  if (activePreset === i) {
+    activePreset = null;
+    document.getElementById('promptInput').value = '';
+  } else {
+    btn.classList.add('active');
+    activePreset = i;
+    document.getElementById('promptInput').value = prompt;
+  }
+}
+
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  const btn = event.target;
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '隠す'; }
+  else { inp.type = 'password'; btn.textContent = '表示'; }
+}
+
+function triggerUpload() {
+  if (currentImageFile) return;
+  document.getElementById('fileInput').click();
+}
+
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (file) setImage(file);
+}
+
+function onDrop(event) {
+  event.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) setImage(file);
+}
+
+function onDragOver(event) {
+  event.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag');
+}
+
+function onDragLeave() {
+  document.getElementById('uploadZone').classList.remove('drag');
+}
+
+function setImage(file) {
+  currentImageFile = file;
+  currentImageURL = URL.createObjectURL(file);
+
+  const zone = document.getElementById('uploadZone');
+  zone.onclick = null;
+  zone.style.cursor = 'default';
+  zone.innerHTML = `
+    <img src="${currentImageURL}" class="upload-preview" alt="preview">
+    <button class="upload-change" onclick="clearImage(event)">✕ 変更</button>
+  `;
+  document.getElementById('resultBox').style.display = 'none';
+  hideError();
+}
+
+function clearImage(e) {
+  e.stopPropagation();
+  currentImageFile = null;
+  currentImageURL = null;
+  const zone = document.getElementById('uploadZone');
+  zone.onclick = triggerUpload;
+  zone.style.cursor = 'pointer';
+  zone.innerHTML = `
+    <div class="upload-placeholder">
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">クリックまたはドラッグ＆ドロップ</div>
+      <div class="upload-sub">JPG / PNG</div>
+    </div>
+  `;
+  document.getElementById('fileInput').value = '';
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = '⚠️ ' + msg;
+  box.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+function resetResult() {
+  document.getElementById('resultBox').style.display = 'none';
+}
+
+async function generate() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const prompt = document.getElementById('promptInput').value.trim();
+
+  hideError();
+  if (!apiKey) { showError('APIキーを入力してください'); return; }
+  if (!currentImageFile) { showError('写真をアップロードしてください'); return; }
+  if (!prompt) { showError('施工内容を選択または入力してください'); return; }
+
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('loadingBox').style.display = 'block';
+  document.getElementById('resultBox').style.display = 'none';
+
+  try {
+    const formData = new FormData();
+    formData.append('model', 'gpt-image-1');
+    formData.append('image[]', currentImageFile, currentImageFile.name);
+    formData.append('prompt', prompt);
+    formData.append('n', '1');
+    formData.append('size', '1024x1024');
+
+    const res = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || '生成に失敗しました');
+
+    const imgData = data.data?.[0];
+    let resultSrc = '';
+    if (imgData?.url) resultSrc = imgData.url;
+    else if (imgData?.b64_json) resultSrc = `data:image/png;base64,${imgData.b64_json}`;
+    else throw new Error('画像の取得に失敗しました');
+
+    document.getElementById('beforeImg').src = currentImageURL;
+    document.getElementById('afterImg').src = resultSrc;
+    document.getElementById('dlBtn').href = resultSrc;
+    document.getElementById('resultBox').style.display = 'block';
+
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('loadingBox').style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>
