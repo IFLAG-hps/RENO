@@ -8,198 +8,158 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:wght@400;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
-body{
-  background:#0c0c0c;
-  font-family:'DM Sans','Hiragino Sans',sans-serif;
-  color:#ede9e3;
-  display:flex;flex-direction:column;height:100vh;
-}
+body{background:#0c0c0c;font-family:'DM Sans','Hiragino Sans',sans-serif;color:#ede9e3;display:flex;flex-direction:column;height:100vh;}
 ::placeholder{color:#444;}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-track{background:#111;}
 ::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px;}
 
-/* ── Setup overlay ── */
-#setup{
+/* ── PIN Screen ── */
+#pinScreen{
   position:fixed;inset:0;background:#0c0c0c;
   display:flex;align-items:center;justify-content:center;
   z-index:100;padding:24px;
 }
-.setup-card{
-  width:100%;max-width:440px;
+.pin-card{width:100%;max-width:320px;text-align:center;}
+.pin-logo{
+  font-family:'Cormorant Garamond',serif;font-size:30px;
+  font-weight:600;letter-spacing:0.14em;margin-bottom:4px;
 }
-.setup-logo{
-  font-family:'Cormorant Garamond',serif;font-size:28px;
-  font-weight:600;letter-spacing:0.12em;margin-bottom:4px;
-}
-.setup-logo span{
-  font-family:'DM Sans',sans-serif;font-size:10px;
-  color:#7a6a50;letter-spacing:0.25em;text-transform:uppercase;
+.pin-logo-badge{
+  display:inline-block;font-size:9px;color:#7a6a50;
+  letter-spacing:0.22em;text-transform:uppercase;
   border:1px solid #2a2a2a;padding:2px 7px;border-radius:3px;
-  vertical-align:middle;margin-left:10px;
+  margin-left:8px;vertical-align:middle;
 }
-.setup-desc{color:#686868;font-size:13px;margin-bottom:32px;letter-spacing:0.02em;}
-.setup-field{margin-bottom:16px;}
-.setup-label{
-  font-size:10px;color:#686868;letter-spacing:0.16em;
-  text-transform:uppercase;display:block;margin-bottom:7px;
+.pin-divider{height:1px;background:linear-gradient(to right,transparent,#1e1e1e,transparent);margin:28px 0;}
+.pin-label{font-size:11px;color:#686868;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:20px;}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:28px;}
+.pin-dot{
+  width:44px;height:52px;background:#111;border:1px solid #222;
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:300;color:#ede9e3;letter-spacing:0;
+  transition:border-color 0.15s;
 }
-.setup-input{
-  width:100%;background:#141414;border:1px solid #222;border-radius:6px;
-  color:#ede9e3;font-size:13px;padding:11px 14px;outline:none;
-  font-family:inherit;transition:border-color 0.2s;
+.pin-dot.filled{border-color:#6a5030;color:#c8a96e;}
+.pin-dot.error{border-color:#5a2020;color:#c07070;animation:shake 0.3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}  }
+.pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pin-key{
+  background:#141414;border:1px solid #1e1e1e;border-radius:8px;
+  padding:14px;font-size:18px;font-weight:300;color:#ede9e3;
+  cursor:pointer;transition:all 0.12s;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;
 }
-.setup-input:focus{border-color:#8a6a3a;}
-.setup-note{font-size:11px;color:#444;margin-top:5px;letter-spacing:0.02em;}
-.setup-btn{
-  width:100%;margin-top:24px;
-  background:linear-gradient(135deg,#c8a96e,#9a7238);
-  border:none;border-radius:8px;color:#0c0c0c;
-  font-weight:500;font-size:13px;padding:14px;
-  cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;
-  font-family:inherit;transition:opacity 0.2s;
-}
-.setup-btn:hover{opacity:0.88;}
-.setup-divider{
-  height:1px;background:linear-gradient(to right,#1e1e1e,transparent);
-  margin:28px 0;
-}
+.pin-key:hover{background:#1a1a1a;border-color:#2a2a2a;}
+.pin-key:active{transform:scale(0.95);}
+.pin-key.del{font-size:14px;color:#666;}
+.pin-key.empty{pointer-events:none;background:transparent;border-color:transparent;}
 
 /* ── Header ── */
 #header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid #161616;
-  flex-shrink:0;
+  padding:14px 20px;border-bottom:1px solid #161616;flex-shrink:0;
 }
-.header-logo{
-  font-family:'Cormorant Garamond',serif;
-  font-size:20px;font-weight:600;letter-spacing:0.12em;
-}
-.header-badge{
-  font-size:9px;color:#7a6a50;letter-spacing:0.2em;
-  text-transform:uppercase;border:1px solid #2a2a2a;
-  padding:2px 6px;border-radius:3px;margin-left:8px;vertical-align:middle;
-}
-.header-reset{
-  background:none;border:1px solid #1e1e1e;border-radius:5px;
-  color:#555;font-size:11px;padding:5px 10px;cursor:pointer;
-  letter-spacing:0.04em;font-family:inherit;transition:color 0.15s;
-}
-.header-reset:hover{color:#888;}
+.h-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.12em;}
+.h-badge{font-size:9px;color:#7a6a50;letter-spacing:0.2em;text-transform:uppercase;border:1px solid #2a2a2a;padding:2px 6px;border-radius:3px;margin-left:8px;vertical-align:middle;}
+.h-reset{background:none;border:1px solid #1e1e1e;border-radius:5px;color:#555;font-size:11px;padding:5px 10px;cursor:pointer;letter-spacing:0.04em;font-family:inherit;transition:color 0.15s;display:flex;align-items:center;gap:5px;}
+.h-reset:hover{color:#888;}
 
-/* ── Chat area ── */
-#chat{
-  flex:1;overflow-y:auto;padding:24px 20px;
-  display:flex;flex-direction:column;gap:16px;
-}
-.msg{display:flex;gap:10px;max-width:100%;}
+/* ── Chat ── */
+#chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.msg{display:flex;gap:10px;animation:fadeIn 0.3s ease;}
 .msg.user{flex-direction:row-reverse;}
-.avatar{
-  width:28px;height:28px;border-radius:50%;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:11px;
-  margin-top:2px;
-}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:2px;}
 .avatar.agent{background:#1a1714;border:1px solid #2a2520;color:#c8a96e;}
 .avatar.user{background:#1a1a1a;border:1px solid #222;color:#888;}
-.bubble{
-  max-width:75%;padding:11px 15px;border-radius:10px;
-  font-size:13.5px;line-height:1.65;letter-spacing:0.01em;
-}
+.bubble{max-width:78%;padding:11px 15px;border-radius:10px;font-size:13.5px;line-height:1.65;letter-spacing:0.01em;}
 .bubble.agent{background:#141414;border:1px solid #1e1e1e;color:#d0cdc8;}
 .bubble.user{background:#1a1714;border:1px solid #2a2218;color:#c8b890;}
 
-/* image result in chat */
-.bubble.agent img.gen-result{
-  width:100%;border-radius:7px;display:block;margin-top:10px;max-height:260px;object-fit:cover;
-}
+/* compare */
 .compare-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
-.compare-pair .ci{position:relative;}
-.compare-pair img{width:100%;border-radius:6px;display:block;max-height:180px;object-fit:cover;}
-.ci-tag{
-  position:absolute;top:7px;left:7px;background:rgba(10,10,10,0.82);
-  font-size:9px;padding:2px 7px;border-radius:3px;
-  letter-spacing:0.12em;text-transform:uppercase;backdrop-filter:blur(4px);
-}
+.ci{position:relative;}
+.ci img{width:100%;border-radius:6px;display:block;max-height:180px;object-fit:cover;}
+.ci-tag{position:absolute;top:7px;left:7px;background:rgba(10,10,10,0.82);font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:0.12em;text-transform:uppercase;backdrop-filter:blur(4px);}
 .ci-tag.before{color:#b09060;}
 .ci-tag.after{color:#7ab87a;}
 
-/* upload card in chat */
-.upload-card{
-  margin-top:10px;border:1px dashed #2a2a2a;border-radius:8px;
-  padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;
-}
+/* upload card */
+.upload-card{margin-top:10px;border:1px dashed #2a2a2a;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;}
 .upload-card:hover{border-color:#6a5030;background:rgba(200,169,110,0.03);}
-.upload-card-icon{margin-bottom:6px;color:#444;}
-.upload-card-text{font-size:12px;color:#666;letter-spacing:0.03em;}
-.upload-card input{display:none;}
+.upload-card-text{font-size:12px;color:#666;margin-top:6px;letter-spacing:0.03em;}
 
-/* typing indicator */
-.typing{display:flex;align-items:center;gap:4px;padding:4px 0;}
-.typing span{
-  width:5px;height:5px;background:#444;border-radius:50%;
-  animation:bounce 1.2s infinite;
-}
+/* typing */
+.typing{display:flex;align-items:center;gap:4px;padding:2px 0;}
+.typing span{width:5px;height:5px;background:#333;border-radius:50%;animation:bounce 1.2s infinite;}
 .typing span:nth-child(2){animation-delay:0.2s;}
 .typing span:nth-child(3){animation-delay:0.4s;}
-@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-5px);}}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
 
 /* ── Input bar ── */
-#inputbar{
-  padding:14px 16px;border-top:1px solid #161616;
-  display:flex;gap:10px;align-items:flex-end;flex-shrink:0;
-}
+#inputbar{padding:12px 16px;border-top:1px solid #161616;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
 #userInput{
   flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;
   color:#ede9e3;font-size:13px;padding:10px 14px;outline:none;
-  resize:none;max-height:120px;overflow-y:auto;font-family:inherit;
-  line-height:1.5;transition:border-color 0.2s;min-height:42px;
+  resize:none;max-height:120px;font-family:inherit;line-height:1.5;
+  transition:border-color 0.2s;min-height:42px;
 }
 #userInput:focus{border-color:#3a2e1e;}
 #sendBtn{
-  background:linear-gradient(135deg,#c8a96e,#9a7238);
-  border:none;border-radius:7px;width:38px;height:38px;
-  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#c8a96e,#9a7238);border:none;border-radius:7px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:opacity 0.15s;flex-shrink:0;
 }
 #sendBtn:hover{opacity:0.85;}
 #sendBtn:disabled{opacity:0.3;cursor:not-allowed;}
 
-/* ── Misc ── */
-@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
-.msg{animation:fadeIn 0.3s ease;}
+#app{display:none;flex:1;flex-direction:column;height:100vh;overflow:hidden;}
 </style>
 </head>
 <body>
 
-<!-- Setup -->
-<div id="setup">
-  <div class="setup-card">
-    <div class="setup-logo">RENO.ai <span>AI Agent</span></div>
-    <p class="setup-desc">リフォームの要望をチャットでヒアリングし、施工後のイメージを生成します。</p>
-    <div class="setup-divider"></div>
-    <div class="setup-field">
-      <label class="setup-label">Anthropic API Key <span style="color:#554433;font-size:9px;">（会話AI）</span></label>
-      <input type="password" id="keyAnthropic" class="setup-input" placeholder="sk-ant-...">
+<!-- PIN Screen -->
+<div id="pinScreen">
+  <div class="pin-card">
+    <div class="pin-logo">RENO.ai<span class="pin-logo-badge">AI Agent</span></div>
+    <div class="pin-divider"></div>
+    <div class="pin-label">PIN を入力</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
     </div>
-    <div class="setup-field">
-      <label class="setup-label">OpenAI API Key <span style="color:#554433;font-size:9px;">（画像生成）</span></label>
-      <input type="password" id="keyOpenai" class="setup-input" placeholder="sk-proj-...">
+    <div class="pin-numpad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+      </button>
     </div>
-    <p class="setup-note">※ 入力したキーはブラウザ外に送信されません</p>
-    <button class="setup-btn" onclick="startChat()">はじめる</button>
   </div>
 </div>
 
 <!-- App -->
-<div id="app" style="display:none;flex:1;flex-direction:column;height:100vh;overflow:hidden;display:none;">
+<div id="app">
   <div id="header">
     <div>
-      <span class="header-logo">RENO.ai</span>
-      <span class="header-badge">AI Agent</span>
+      <span class="h-logo">RENO.ai</span>
+      <span class="h-badge">AI Agent</span>
     </div>
-    <button class="header-reset" onclick="resetApp()">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;margin-right:4px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
-      リセット
+    <button class="h-reset" onclick="lockApp()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      ロック
     </button>
   </div>
   <div id="chat"></div>
@@ -209,12 +169,18 @@ body{
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
     </textarea>
     <button id="sendBtn" onclick="sendMessage()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0c0c0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0c0c0c" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </div>
 </div>
 
 <script>
+// ── Config ──
+const SUPABASE_URL  = 'https://sfhtvtcmgueystyuhzvd.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmaHR2dGNtZ3VleXN0eXVoenZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Nzg0MDYsImV4cCI6MjA5MDM1NDQwNn0.qsON2xYdDf22LtU-jGd96Ubaif0xzzswC9KnzWndKNw';
+const EDGE_URL      = `${SUPABASE_URL}/functions/v1/reno-agent`;
+const EDGE_HEADERS  = { 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON };
+
 const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタントです。
 エンドユーザー（施主）とフレンドリーかつプロフェッショナルにチャットし、リフォームの要望をヒアリングして、施工後のビジュアルイメージ生成を提案します。
 
@@ -238,32 +204,56 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 - 画像生成後は結果についてコメントし、別の箇所も試すか聞く
 - 親しみやすく、専門的すぎない言葉を使う`;
 
-let anthropicKey = '';
-let openaiKey = '';
-let history = [];
-let waitingForImage = false;
-let pendingPrompt = '';
+// ── PIN ──
+let pinValue = '';
+const CORRECT_PIN = '2759';
 
-function startChat() {
-  anthropicKey = document.getElementById('keyAnthropic').value.trim();
-  openaiKey = document.getElementById('keyOpenai').value.trim();
-  if (!anthropicKey || !openaiKey) { alert('両方のAPIキーを入力してください'); return; }
-  document.getElementById('setup').style.display = 'none';
-  const app = document.getElementById('app');
-  app.style.display = 'flex';
-  app.style.flexDirection = 'column';
-  addAgentMessage('こんにちは！RENO.aiへようこそ🏠\nどのお部屋をリフォームしたいとお考えですか？（例：リビング、キッチン、浴室など）');
+function pinKey(k) {
+  if (pinValue.length >= 4) return;
+  pinValue += k;
+  renderDots();
+  if (pinValue.length === 4) setTimeout(checkPin, 120);
 }
 
-function resetApp() {
-  history = [];
-  waitingForImage = false;
-  pendingPrompt = '';
-  document.getElementById('chat').innerHTML = '';
-  document.getElementById('setup').style.display = 'flex';
+function pinDel() {
+  pinValue = pinValue.slice(0, -1);
+  renderDots();
+}
+
+function renderDots(error = false) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.textContent = pinValue.length > i ? '●' : '';
+    d.className = 'pin-dot' + (pinValue.length > i ? ' filled' : '') + (error ? ' error' : '');
+  }
+}
+
+function checkPin() {
+  if (pinValue === CORRECT_PIN) {
+    document.getElementById('pinScreen').style.display = 'none';
+    const app = document.getElementById('app');
+    app.style.display = 'flex';
+    if (!chatStarted) initChat();
+  } else {
+    renderDots(true);
+    setTimeout(() => { pinValue = ''; renderDots(); }, 600);
+  }
+}
+
+function lockApp() {
+  pinValue = '';
+  renderDots();
+  document.getElementById('pinScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('keyAnthropic').value = '';
-  document.getElementById('keyOpenai').value = '';
+}
+
+// ── Chat ──
+let history = [];
+let chatStarted = false;
+
+function initChat() {
+  chatStarted = true;
+  addAgentMessage('こんにちは！RENO.aiへようこそ🏠\nどのお部屋をリフォームしたいとお考えですか？（例：リビング、キッチン、洗面所など）');
 }
 
 function autoResize(el) {
@@ -271,188 +261,150 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-function scrollToBottom() {
-  const chat = document.getElementById('chat');
-  chat.scrollTop = chat.scrollHeight;
+function scrollBottom() {
+  const c = document.getElementById('chat');
+  c.scrollTop = c.scrollHeight;
 }
 
-function addAgentMessage(text, withImage = null, beforeSrc = null) {
+const agentIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
+const userIcon  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
+function addAgentMessage(text, afterSrc = null, beforeSrc = null) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg agent';
-  
-  const iconSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
-  
-  let inner = `<div class="avatar agent">${iconSVG}</div><div class="bubble agent">`;
+  let inner = `<div class="avatar agent">${agentIcon}</div><div class="bubble agent">`;
   inner += text.replace(/\n/g, '<br>');
-
-  if (withImage && beforeSrc) {
+  if (afterSrc && beforeSrc) {
     inner += `<div class="compare-pair">
       <div class="ci"><span class="ci-tag before">Before</span><img src="${beforeSrc}" alt="before"></div>
-      <div class="ci"><span class="ci-tag after">After</span><img src="${withImage}" alt="after"></div>
+      <div class="ci"><span class="ci-tag after">After</span><img src="${afterSrc}" alt="after"></div>
     </div>`;
   }
   inner += '</div>';
   div.innerHTML = inner;
   chat.appendChild(div);
-  scrollToBottom();
-  return div;
+  scrollBottom();
 }
 
 function addUserMessage(text) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg user';
-  const iconSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-  div.innerHTML = `<div class="avatar user">${iconSVG}</div><div class="bubble user">${text.replace(/\n/g,'<br>')}</div>`;
+  div.innerHTML = `<div class="avatar user">${userIcon}</div><div class="bubble user">${text.replace(/\n/g,'<br>')}</div>`;
   chat.appendChild(div);
-  scrollToBottom();
+  scrollBottom();
 }
 
-function addTypingIndicator() {
+function addTyping() {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
-  div.className = 'msg agent';
-  div.id = 'typing-indicator';
-  const iconSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
-  div.innerHTML = `<div class="avatar agent">${iconSVG}</div><div class="bubble agent"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  div.className = 'msg agent'; div.id = 'typing';
+  div.innerHTML = `<div class="avatar agent">${agentIcon}</div><div class="bubble agent"><div class="typing"><span></span><span></span><span></span></div></div>`;
   chat.appendChild(div);
-  scrollToBottom();
+  scrollBottom();
 }
 
-function removeTypingIndicator() {
-  const el = document.getElementById('typing-indicator');
+function removeTyping() {
+  const el = document.getElementById('typing');
   if (el) el.remove();
 }
 
 function showUploadCard(prompt) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
-  div.className = 'msg agent';
-  div.id = 'upload-card-msg';
-  const iconSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
-  div.innerHTML = `<div class="avatar agent">${iconSVG}</div>
+  div.className = 'msg agent'; div.id = 'upload-msg';
+  div.innerHTML = `<div class="avatar agent">${agentIcon}</div>
     <div class="bubble agent">
       <div class="upload-card" onclick="document.getElementById('photoInput').click()">
-        <div class="upload-card-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        </div>
-        <div class="upload-card-text">現在のお部屋の写真をアップロード</div>
-        <div class="upload-card-text" style="color:#444;font-size:11px;margin-top:3px;">タップして選択 / ドラッグ＆ドロップ</div>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.4" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div class="upload-card-text">現在のお部屋の写真をタップしてアップロード</div>
       </div>
-      <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event,'${prompt.replace(/'/g,"\\'")}')">
+      <input type="file" id="photoInput" accept="image/*" style="display:none"
+        onchange="handlePhoto(event,'${prompt.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
     </div>`;
   chat.appendChild(div);
-  scrollToBottom();
+  scrollBottom();
 }
 
-async function handlePhotoUpload(event, prompt) {
+async function handlePhoto(event, prompt) {
   const file = event.target.files[0];
   if (!file) return;
   const beforeURL = URL.createObjectURL(file);
 
-  // remove upload card
-  const card = document.getElementById('upload-card-msg');
+  const card = document.getElementById('upload-msg');
   if (card) card.remove();
-
   addUserMessage('📷 写真をアップロードしました');
-  addTypingIndicator();
+  addTyping();
 
   try {
-    const formData = new FormData();
-    formData.append('model', 'gpt-image-1');
-    formData.append('image[]', file, file.name);
-    formData.append('prompt', prompt);
-    formData.append('n', '1');
-    formData.append('size', '1024x1024');
+    const form = new FormData();
+    form.append('pin', CORRECT_PIN);
+    form.append('prompt', prompt);
+    form.append('image', file, file.name);
 
-    const res = await fetch('https://api.openai.com/v1/images/edits', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: formData,
-    });
+    const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || '生成に失敗しました');
 
-    const imgData = data.data?.[0];
-    let src = imgData?.url || (imgData?.b64_json ? `data:image/png;base64,${imgData.b64_json}` : null);
+    const img = data.data?.[0];
+    const src = img?.url || (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
     if (!src) throw new Error('画像の取得に失敗しました');
 
-    removeTypingIndicator();
-    addAgentMessage('施工後のイメージが完成しました！いかがでしょうか？\n他の箇所も試してみますか？', src, beforeURL);
-
-    history.push({
-      role: 'assistant',
-      content: '施工後のイメージが完成しました！いかがでしょうか？\n他の箇所も試してみますか？'
-    });
+    removeTyping();
+    addAgentMessage('施工後のイメージが完成しました！いかがでしょうか？✨\n他の箇所や別のスタイルも試してみますか？', src, beforeURL);
+    history.push({ role:'assistant', content:'施工後のイメージが完成しました。いかがでしょうか？他の箇所も試してみますか？' });
 
   } catch(e) {
-    removeTypingIndicator();
-    addAgentMessage(`申し訳ありません、画像生成中にエラーが発生しました。\n${e.message}`);
+    removeTyping();
+    addAgentMessage(`申し訳ありません、エラーが発生しました。\n${e.message}`);
   }
-
-  waitingForImage = false;
-  pendingPrompt = '';
 }
 
 async function sendMessage() {
   const input = document.getElementById('userInput');
-  const text = input.value.trim();
-  if (!text) return;
-  if (document.getElementById('sendBtn').disabled) return;
+  const text  = input.value.trim();
+  if (!text || document.getElementById('sendBtn').disabled) return;
 
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   addUserMessage(text);
-  history.push({ role: 'user', content: text });
-
+  history.push({ role:'user', content: text });
   document.getElementById('sendBtn').disabled = true;
-  addTypingIndicator();
+  addTyping();
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res  = await fetch(EDGE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
-        system: SYSTEM_PROMPT,
-        messages: history
-      })
+      headers: { ...EDGE_HEADERS, 'Content-Type':'application/json' },
+      body: JSON.stringify({ pin: CORRECT_PIN, type:'chat', system: SYSTEM_PROMPT, messages: history }),
     });
-
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'APIエラーが発生しました');
+    if (!res.ok) throw new Error(data.error?.message || 'APIエラー');
 
     const raw = data.content?.[0]?.text || '';
-    removeTypingIndicator();
+    removeTyping();
 
-    // Detect [GENERATE_IMAGE: prompt]
     const match = raw.match(/\[GENERATE_IMAGE:\s*([\s\S]+?)\]/);
     if (match) {
-      const imagePrompt = match[1].trim();
-      const displayText = raw.replace(/\[GENERATE_IMAGE:[\s\S]+?\]/, '').trim();
-      if (displayText) addAgentMessage(displayText);
-      history.push({ role: 'assistant', content: raw });
-      showUploadCard(imagePrompt);
+      const prompt = match[1].trim();
+      const display = raw.replace(/\[GENERATE_IMAGE:[\s\S]+?\]/, '').trim();
+      if (display) addAgentMessage(display);
+      history.push({ role:'assistant', content: raw });
+      showUploadCard(prompt);
     } else {
       addAgentMessage(raw);
-      history.push({ role: 'assistant', content: raw });
+      history.push({ role:'assistant', content: raw });
     }
 
   } catch(e) {
-    removeTypingIndicator();
+    removeTyping();
     addAgentMessage(`エラーが発生しました: ${e.message}`);
   }
 
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('userInput').focus();
 }
+
 </script>
 </body>
 </html>
