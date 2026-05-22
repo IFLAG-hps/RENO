@@ -5,140 +5,220 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RENO.ai – 施工後イメージ生成</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Cormorant+Garamond:wght@400;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     min-height: 100vh;
-    background: #0e0e0e;
+    background: #0c0c0c;
     font-family: 'DM Sans', 'Hiragino Sans', sans-serif;
-    color: #f0ede8;
+    color: #ede9e3;
   }
-  ::placeholder { color: #555; }
-  ::-webkit-scrollbar { width: 4px; }
+  ::placeholder { color: #444; }
+  ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: #111; }
-  ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
 
-  /* Layout */
-  .container { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  .container { max-width: 680px; margin: 0 auto; padding: 48px 24px 80px; }
 
-  /* Header */
-  .header { margin-bottom: 28px; }
-  .logo { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-  .logo-text { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
-  .logo-badge {
-    font-size: 11px; color: #c8a96e; font-weight: 500; letter-spacing: 0.15em;
-    border: 1px solid #c8a96e; padding: 2px 7px; border-radius: 3px;
+  /* ── Header ── */
+  .header { margin-bottom: 40px; }
+  .logo {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
   }
-  .tagline { color: #666; font-size: 13px; letter-spacing: 0.02em; }
-  .divider { height: 1px; background: linear-gradient(to right, #2a2a2a, transparent); margin-top: 20px; }
+  .logo-wordmark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px; font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #ede9e3;
+  }
+  .logo-sep { width: 1px; height: 22px; background: #2e2e2e; }
+  .logo-sub {
+    font-size: 10px; color: #7a6a50; letter-spacing: 0.25em;
+    text-transform: uppercase; font-weight: 400;
+    line-height: 1.4;
+  }
+  .tagline { color: #4a4a4a; font-size: 12px; letter-spacing: 0.06em; font-weight: 300; }
+  .header-line {
+    margin-top: 24px;
+    height: 1px;
+    background: linear-gradient(to right, #222, transparent);
+  }
 
-  /* Section */
-  .section { margin-bottom: 26px; }
+  /* ── Section ── */
+  .section { margin-bottom: 28px; }
   .section-label {
-    font-size: 11px; color: #666; letter-spacing: 0.1em; text-transform: uppercase;
-    display: block; margin-bottom: 8px;
+    font-size: 10px; color: #4a4a4a; letter-spacing: 0.18em;
+    text-transform: uppercase; display: flex; align-items: center;
+    gap: 8px; margin-bottom: 10px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: #1e1e1e;
   }
 
-  /* Inputs */
+  /* ── API Key ── */
   .key-wrap { position: relative; }
-  .key-input, .prompt-input {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-    color: #f0ede8; font-size: 13px; padding: 10px 14px; width: 100%;
+  .key-input {
+    background: #141414; border: 1px solid #222;
+    border-radius: 6px; color: #ede9e3; font-size: 13px;
+    padding: 11px 52px 11px 14px; width: 100%;
     outline: none; transition: border-color 0.2s; font-family: inherit;
+    letter-spacing: 0.02em;
   }
-  .key-input { padding-right: 60px; }
-  .key-input:focus, .prompt-input:focus { border-color: #c8a96e; }
-  .prompt-input { resize: vertical; min-height: 70px; }
+  .key-input:focus { border-color: #8a6a3a; }
   .key-toggle {
-    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; color: #555; cursor: pointer; font-size: 12px;
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #3a3a3a; cursor: pointer;
+    padding: 0; display: flex; align-items: center; transition: color 0.15s;
   }
-  .key-note { font-size: 11px; color: #444; margin-top: 5px; }
+  .key-toggle:hover { color: #6a6a6a; }
+  .key-note {
+    font-size: 10px; color: #333; margin-top: 6px;
+    letter-spacing: 0.04em; display: flex; align-items: center; gap: 5px;
+  }
 
-  /* Upload */
+  /* ── Upload ── */
   .upload-zone {
-    border: 1.5px dashed #333; border-radius: 12px; cursor: pointer;
-    transition: all 0.2s; position: relative; overflow: hidden;
+    border: 1px solid #1e1e1e; border-radius: 10px;
+    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+    background: #111;
   }
-  .upload-zone:hover, .upload-zone.drag { border-color: #c8a96e; background: rgba(200,169,110,0.04); }
-  .upload-placeholder { padding: 40px 24px; text-align: center; }
-  .upload-icon { font-size: 32px; margin-bottom: 8px; }
-  .upload-text { font-size: 14px; color: #555; }
-  .upload-sub { font-size: 12px; color: #3a3a3a; margin-top: 4px; }
-  .upload-preview { width: 100%; display: block; max-height: 340px; object-fit: cover; border-radius: 10px; }
+  .upload-zone:hover, .upload-zone.drag {
+    border-color: #6a5030; background: #131210;
+  }
+  .upload-placeholder {
+    padding: 44px 24px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .upload-icon-wrap {
+    width: 48px; height: 48px; border: 1px solid #222;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #3a3a3a; transition: all 0.2s;
+  }
+  .upload-zone:hover .upload-icon-wrap { border-color: #6a5030; color: #8a6a3a; }
+  .upload-text { font-size: 13px; color: #444; letter-spacing: 0.02em; }
+  .upload-sub { font-size: 11px; color: #2a2a2a; letter-spacing: 0.04em; }
+  .upload-preview {
+    width: 100%; display: block; max-height: 360px;
+    object-fit: cover; border-radius: 9px;
+  }
   .upload-change {
-    position: absolute; top: 10px; right: 10px;
-    background: rgba(0,0,0,0.7); border: none; color: #f0ede8;
-    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
-  }
-
-  /* Presets */
-  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .preset-btn {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-    padding: 10px 14px; cursor: pointer; transition: all 0.15s;
-    color: #ccc; font-size: 13px; text-align: left; line-height: 1.4;
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,0.75); border: 1px solid #333;
+    color: #aaa; border-radius: 5px; padding: 5px 10px;
+    cursor: pointer; font-size: 11px; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 5px; transition: all 0.15s;
     font-family: inherit;
   }
-  .preset-btn:hover { border-color: #c8a96e; color: #f0ede8; background: #1f1d1a; }
-  .preset-btn.active { border-color: #c8a96e; background: #1f1d1a; color: #c8a96e; }
+  .upload-change:hover { background: rgba(0,0,0,0.9); color: #ccc; }
 
-  /* Error */
+  /* ── Presets ── */
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-btn {
+    background: #111; border: 1px solid #1e1e1e; border-radius: 7px;
+    padding: 11px 14px; cursor: pointer; transition: all 0.15s;
+    color: #555; font-size: 12px; text-align: left;
+    font-family: inherit; letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .preset-btn .icon { flex-shrink: 0; opacity: 0.5; transition: opacity 0.15s; }
+  .preset-btn:hover { border-color: #3a2e1e; color: #aaa; background: #131210; }
+  .preset-btn:hover .icon { opacity: 0.8; }
+  .preset-btn.active { border-color: #6a5030; background: #13110d; color: #c8a96e; }
+  .preset-btn.active .icon { opacity: 1; color: #c8a96e; }
+
+  /* ── Prompt ── */
+  .prompt-input {
+    background: #111; border: 1px solid #1e1e1e;
+    border-radius: 7px; color: #ede9e3; font-size: 12px;
+    padding: 11px 14px; width: 100%; outline: none;
+    resize: vertical; min-height: 72px; transition: border-color 0.2s;
+    font-family: inherit; letter-spacing: 0.02em; line-height: 1.6;
+  }
+  .prompt-input:focus { border-color: #8a6a3a; }
+
+  /* ── Error ── */
   .error-box {
-    background: #1a0f0f; border: 1px solid #5a2020; border-radius: 8px;
-    padding: 10px 14px; margin-bottom: 20px; font-size: 13px; color: #e08080;
+    background: #120a0a; border: 1px solid #3a1515;
+    border-radius: 7px; padding: 10px 14px;
+    margin-bottom: 18px; font-size: 12px; color: #c07070;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: 0.02em;
   }
 
-  /* Generate button */
+  /* ── Generate ── */
   .gen-btn {
-    background: linear-gradient(135deg, #c8a96e, #a07840);
-    border: none; border-radius: 10px; color: #0e0e0e;
-    font-weight: 500; font-size: 15px; padding: 14px 32px;
-    cursor: pointer; width: 100%; transition: opacity 0.2s, transform 0.1s;
-    letter-spacing: 0.03em; font-family: inherit;
+    background: linear-gradient(135deg, #c8a96e 0%, #9a7238 100%);
+    border: none; border-radius: 8px; color: #0c0c0c;
+    font-weight: 500; font-size: 13px; padding: 14px 32px;
+    cursor: pointer; width: 100%;
+    transition: opacity 0.2s, transform 0.15s;
+    letter-spacing: 0.1em; font-family: inherit;
+    text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
   }
-  .gen-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
-  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .gen-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .gen-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 
-  /* Loading */
-  .loading { text-align: center; margin-top: 32px; }
+  /* ── Loading ── */
+  .loading { text-align: center; margin-top: 36px; }
   .spinner {
-    width: 28px; height: 28px; border: 2px solid #333; border-top-color: #c8a96e;
-    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
+    width: 24px; height: 24px; border: 1.5px solid #222;
+    border-top-color: #c8a96e; border-radius: 50%;
+    animation: spin 0.9s linear infinite; margin: 0 auto;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: #555; font-size: 13px; margin-top: 12px; }
+  .loading-text {
+    color: #3a3a3a; font-size: 12px; margin-top: 14px;
+    letter-spacing: 0.06em;
+  }
 
-  /* Result */
-  .result { margin-top: 36px; animation: fadeIn 0.5s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  .result-label { font-size: 11px; color: #c8a96e; letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 14px; }
-  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* ── Result ── */
+  .result { margin-top: 40px; animation: fadeIn 0.5s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .result-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .result-rule { flex: 1; height: 1px; background: #1e1e1e; }
+  .result-label {
+    font-size: 10px; color: #6a5030; letter-spacing: 0.2em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .compare-item { position: relative; }
-  .compare-img { width: 100%; border-radius: 10px; display: block; max-height: 280px; object-fit: cover; }
+  .compare-img {
+    width: 100%; border-radius: 8px; display: block;
+    max-height: 260px; object-fit: cover;
+  }
   .img-tag {
     position: absolute; top: 10px; left: 10px;
-    background: rgba(0,0,0,0.7); font-size: 11px;
-    padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase;
+    background: rgba(10,10,10,0.82); font-size: 9px;
+    padding: 3px 8px; border-radius: 3px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    backdrop-filter: blur(4px);
   }
-  .tag-before { color: #c8a96e; }
-  .tag-after { color: #7fd99a; }
-  .result-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .tag-before { color: #8a7050; }
+  .tag-after { color: #6a9a70; }
+  .result-actions { display: flex; gap: 8px; margin-top: 12px; }
   .dl-btn {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-    color: #c8a96e; font-size: 13px; padding: 9px 18px;
-    text-decoration: none; display: inline-block; transition: border-color 0.2s;
+    background: #111; border: 1px solid #222; border-radius: 6px;
+    color: #8a7050; font-size: 12px; padding: 9px 16px;
+    text-decoration: none; display: flex; align-items: center; gap: 6px;
+    transition: border-color 0.2s, color 0.2s; letter-spacing: 0.04em;
     font-family: inherit;
   }
+  .dl-btn:hover { border-color: #6a5030; color: #c8a96e; }
   .retry-btn {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-    color: #888; font-size: 13px; padding: 9px 18px;
-    cursor: pointer; font-family: inherit;
+    background: #111; border: 1px solid #1e1e1e; border-radius: 6px;
+    color: #3a3a3a; font-size: 12px; padding: 9px 16px;
+    cursor: pointer; font-family: inherit; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 6px; transition: color 0.15s;
   }
+  .retry-btn:hover { color: #6a6a6a; }
 
-  @media (max-width: 560px) {
+  @media (max-width: 540px) {
     .compare-grid { grid-template-columns: 1fr; }
     .preset-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 16px 60px; }
   }
 </style>
 </head>
@@ -148,31 +228,46 @@
   <!-- Header -->
   <div class="header">
     <div class="logo">
-      <span class="logo-text">RENO</span>
-      <span class="logo-badge">AI</span>
+      <span class="logo-wordmark">RENO.ai</span>
+      <div class="logo-sep"></div>
+      <span class="logo-sub">Interior<br>Visualizer</span>
     </div>
-    <p class="tagline">施工後のイメージを、今すぐ確認</p>
-    <div class="divider"></div>
+    <p class="tagline">施工後のイメージを、今すぐ確認する</p>
+    <div class="header-line"></div>
   </div>
 
   <!-- API Key -->
   <div class="section">
-    <label class="section-label">OpenAI API Key</label>
+    <div class="section-label">OpenAI API Key</div>
     <div class="key-wrap">
-      <input type="password" id="apiKey" class="key-input" placeholder="sk-...">
-      <button class="key-toggle" onclick="toggleKey()">表示</button>
+      <input type="password" id="apiKey" class="key-input" placeholder="sk-proj-...">
+      <button class="key-toggle" onclick="toggleKey()" id="keyToggleBtn" title="表示/非表示">
+        <!-- Eye icon -->
+        <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
     </div>
-    <p class="key-note">※ キーはブラウザ外に送信されません</p>
+    <p class="key-note">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      キーはこのブラウザ外に送信されません
+    </p>
   </div>
 
   <!-- Upload -->
   <div class="section">
-    <label class="section-label">現状の写真</label>
+    <div class="section-label">現状の写真</div>
     <div class="upload-zone" id="uploadZone" onclick="triggerUpload()" ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave()">
       <div class="upload-placeholder" id="uploadPlaceholder">
-        <div class="upload-icon">📷</div>
+        <div class="upload-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
         <div class="upload-text">クリックまたはドラッグ＆ドロップ</div>
-        <div class="upload-sub">JPG / PNG</div>
+        <div class="upload-sub">JPG · PNG · WEBP</div>
       </div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)">
@@ -180,32 +275,41 @@
 
   <!-- Presets -->
   <div class="section">
-    <label class="section-label">施工プリセット</label>
+    <div class="section-label">施工プリセット</div>
     <div class="preset-grid" id="presetGrid"></div>
   </div>
 
   <!-- Custom Prompt -->
   <div class="section">
-    <label class="section-label">カスタム指示（英語推奨）</label>
-    <textarea id="promptInput" class="prompt-input" placeholder="例: Change the floor to dark walnut wood, keep everything else the same..."></textarea>
+    <div class="section-label">カスタム指示</div>
+    <textarea id="promptInput" class="prompt-input" placeholder="Change the floor to dark walnut wood, keep everything else the same..."></textarea>
   </div>
 
   <!-- Error -->
-  <div class="error-box" id="errorBox" style="display:none"></div>
+  <div class="error-box" id="errorBox" style="display:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="errorText"></span>
+  </div>
 
   <!-- Generate -->
-  <button class="gen-btn" id="genBtn" onclick="generate()">施工後イメージを生成</button>
+  <button class="gen-btn" id="genBtn" onclick="generate()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    施工後イメージを生成
+  </button>
 
   <!-- Loading -->
   <div class="loading" id="loadingBox" style="display:none">
     <div class="spinner"></div>
-    <p class="loading-text">AIがリフォーム後のイメージを生成しています...</p>
+    <p class="loading-text">生成中 — しばらくお待ちください</p>
   </div>
 
   <!-- Result -->
   <div class="result" id="resultBox" style="display:none">
-    <div class="divider" style="margin-bottom:24px"></div>
-    <span class="result-label">✦ 施工後イメージ</span>
+    <div class="result-header">
+      <div class="result-rule"></div>
+      <span class="result-label">Rendering Complete</span>
+      <div class="result-rule"></div>
+    </div>
     <div class="compare-grid">
       <div class="compare-item">
         <span class="img-tag tag-before">Before</span>
@@ -217,21 +321,36 @@
       </div>
     </div>
     <div class="result-actions">
-      <a id="dlBtn" class="dl-btn" href="#" download="reno-ai-result.png">↓ ダウンロード</a>
-      <button class="retry-btn" onclick="resetResult()">↩ やり直す</button>
+      <a id="dlBtn" class="dl-btn" href="#" download="reno-ai.png">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        ダウンロード
+      </a>
+      <button class="retry-btn" onclick="resetResult()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
+        やり直す
+      </button>
     </div>
   </div>
 
 </div>
-
 <script>
+// SVG icons for presets (inline, minimal geometric)
+const ICONS = {
+  floor: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="9" x2="14" y2="9"/><line x1="2" y1="12" x2="14" y2="12"/><rect x="2" y="3" width="12" height="10" rx="1"/></svg>`,
+  concrete: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="0.5"/><rect x="9" y="2" width="5" height="5" rx="0.5"/><rect x="2" y="9" width="5" height="5" rx="0.5"/><rect x="9" y="9" width="5" height="5" rx="0.5"/></svg>`,
+  white: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8h6M8 5v6"/></svg>`,
+  herringbone: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M2 12 L6 8 L10 12"/><path d="M6 8 L10 4 L14 8"/><path d="M2 8 L6 12"/><path d="M10 12 L14 8"/></svg>`,
+  kitchen: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="2" y="8" width="12" height="6" rx="1"/><line x1="2" y1="8" x2="14" y2="8"/><circle cx="5.5" cy="4.5" r="1.5"/><circle cx="10.5" cy="4.5" r="1.5"/><line x1="8" y1="10" x2="8" y2="13"/></svg>`,
+  navy: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3 13 C3 13 5 7 8 7 C11 7 13 13 13 13"/><rect x="2" y="2" width="12" height="5" rx="1"/></svg>`,
+};
+
 const PRESETS = [
-  { label: "🪵 床材をライトオーク無垢材に", prompt: "Change the floor to light oak hardwood. Keep all furniture, walls, and ceiling exactly the same. Photorealistic interior design." },
-  { label: "🧱 壁をコンクリート打ちっぱなしに", prompt: "Change the walls to exposed concrete texture. Keep floor, furniture, and ceiling exactly the same. Photorealistic modern interior." },
-  { label: "🤍 壁紙をホワイトマットに", prompt: "Change all walls to clean matte white paint. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior." },
-  { label: "🔷 床をヘリンボーンタイルに", prompt: "Change the floor to herringbone ceramic tile pattern in light beige. Keep furniture, walls, and ceiling exactly the same. Photorealistic." },
-  { label: "🍳 モダンなキッチンに変更", prompt: "Transform into a modern minimalist kitchen with handleless cabinets in matte white, marble countertops, and integrated appliances. Keep overall room structure." },
-  { label: "🌊 壁を深いネイビーブルーに", prompt: "Paint all walls deep navy blue. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior design." },
+  { key:'floor',       label: '床材をオーク無垢材に',       prompt: 'Change the floor to light oak hardwood. Keep all furniture, walls, and ceiling exactly the same. Photorealistic interior.' },
+  { key:'concrete',    label: '壁をコンクリート打ちっぱなしに', prompt: 'Change the walls to exposed concrete texture. Keep floor, furniture, and ceiling exactly the same. Photorealistic modern interior.' },
+  { key:'white',       label: '壁紙をホワイトマットに',      prompt: 'Change all walls to clean matte white paint. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior.' },
+  { key:'herringbone', label: '床をヘリンボーンタイルに',    prompt: 'Change the floor to herringbone ceramic tile in light beige. Keep furniture, walls, and ceiling exactly the same. Photorealistic.' },
+  { key:'kitchen',     label: 'モダンキッチンに変更',        prompt: 'Transform into a modern minimalist kitchen with handleless matte white cabinets, marble countertops, integrated appliances. Keep room structure.' },
+  { key:'navy',        label: '壁をディープネイビーに',      prompt: 'Paint all walls deep navy blue. Keep floor, furniture, and ceiling exactly the same. Photorealistic interior design.' },
 ];
 
 let currentImageFile = null;
@@ -243,7 +362,7 @@ const grid = document.getElementById('presetGrid');
 PRESETS.forEach((p, i) => {
   const btn = document.createElement('button');
   btn.className = 'preset-btn';
-  btn.textContent = p.label;
+  btn.innerHTML = `<span class="icon">${ICONS[p.key]}</span>${p.label}`;
   btn.onclick = () => selectPreset(i, btn, p.prompt);
   grid.appendChild(btn);
 });
@@ -262,9 +381,14 @@ function selectPreset(i, btn, prompt) {
 
 function toggleKey() {
   const inp = document.getElementById('apiKey');
-  const btn = event.target;
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '隠す'; }
-  else { inp.type = 'password'; btn.textContent = '表示'; }
+  const icon = document.getElementById('eyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type = 'password';
+    icon.innerHTML = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>';
+  }
 }
 
 function triggerUpload() {
@@ -272,20 +396,20 @@ function triggerUpload() {
   document.getElementById('fileInput').click();
 }
 
-function handleFile(event) {
-  const file = event.target.files[0];
+function handleFile(e) {
+  const file = e.target.files[0];
   if (file) setImage(file);
 }
 
-function onDrop(event) {
-  event.preventDefault();
+function onDrop(e) {
+  e.preventDefault();
   document.getElementById('uploadZone').classList.remove('drag');
-  const file = event.dataTransfer.files[0];
+  const file = e.dataTransfer.files[0];
   if (file && file.type.startsWith('image/')) setImage(file);
 }
 
-function onDragOver(event) {
-  event.preventDefault();
+function onDragOver(e) {
+  e.preventDefault();
   document.getElementById('uploadZone').classList.add('drag');
 }
 
@@ -296,45 +420,44 @@ function onDragLeave() {
 function setImage(file) {
   currentImageFile = file;
   currentImageURL = URL.createObjectURL(file);
-
   const zone = document.getElementById('uploadZone');
   zone.onclick = null;
   zone.style.cursor = 'default';
   zone.innerHTML = `
     <img src="${currentImageURL}" class="upload-preview" alt="preview">
-    <button class="upload-change" onclick="clearImage(event)">✕ 変更</button>
-  `;
+    <button class="upload-change" onclick="clearImage(event)">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      変更
+    </button>`;
   document.getElementById('resultBox').style.display = 'none';
   hideError();
 }
 
 function clearImage(e) {
   e.stopPropagation();
-  currentImageFile = null;
-  currentImageURL = null;
+  currentImageFile = null; currentImageURL = null;
   const zone = document.getElementById('uploadZone');
-  zone.onclick = triggerUpload;
-  zone.style.cursor = 'pointer';
+  zone.onclick = triggerUpload; zone.style.cursor = 'pointer';
   zone.innerHTML = `
     <div class="upload-placeholder">
-      <div class="upload-icon">📷</div>
+      <div class="upload-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
       <div class="upload-text">クリックまたはドラッグ＆ドロップ</div>
-      <div class="upload-sub">JPG / PNG</div>
-    </div>
-  `;
+      <div class="upload-sub">JPG · PNG · WEBP</div>
+    </div>`;
   document.getElementById('fileInput').value = '';
 }
 
 function showError(msg) {
-  const box = document.getElementById('errorBox');
-  box.textContent = '⚠️ ' + msg;
-  box.style.display = 'block';
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('errorBox').style.display = 'flex';
 }
-
 function hideError() {
   document.getElementById('errorBox').style.display = 'none';
 }
-
 function resetResult() {
   document.getElementById('resultBox').style.display = 'none';
 }
@@ -342,7 +465,6 @@ function resetResult() {
 async function generate() {
   const apiKey = document.getElementById('apiKey').value.trim();
   const prompt = document.getElementById('promptInput').value.trim();
-
   hideError();
   if (!apiKey) { showError('APIキーを入力してください'); return; }
   if (!currentImageFile) { showError('写真をアップロードしてください'); return; }
@@ -370,16 +492,15 @@ async function generate() {
     if (!res.ok) throw new Error(data.error?.message || '生成に失敗しました');
 
     const imgData = data.data?.[0];
-    let resultSrc = '';
-    if (imgData?.url) resultSrc = imgData.url;
-    else if (imgData?.b64_json) resultSrc = `data:image/png;base64,${imgData.b64_json}`;
+    let src = '';
+    if (imgData?.url) src = imgData.url;
+    else if (imgData?.b64_json) src = `data:image/png;base64,${imgData.b64_json}`;
     else throw new Error('画像の取得に失敗しました');
 
     document.getElementById('beforeImg').src = currentImageURL;
-    document.getElementById('afterImg').src = resultSrc;
-    document.getElementById('dlBtn').href = resultSrc;
+    document.getElementById('afterImg').src = src;
+    document.getElementById('dlBtn').href = src;
     document.getElementById('resultBox').style.display = 'block';
-
   } catch (e) {
     showError(e.message);
   } finally {
