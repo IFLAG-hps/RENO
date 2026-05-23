@@ -1452,10 +1452,18 @@ async function generateNight(btn, afterSrc, beforeSrc) {
   chat.appendChild(card); scrollBottom();
 
   try {
-    // Fetch the after image as a file
-    const res0 = await fetch(afterSrc);
-    const blob0 = await res0.blob();
-    const file  = new File([blob0], 'after.png', { type: blob0.type });
+    // afterSrcがdata URIの場合はそのままblobに変換、URLの場合はfetch
+    let blob0;
+    if (afterSrc.startsWith('data:')) {
+      const byteStr = atob(afterSrc.split(',')[1]);
+      const arr = new Uint8Array(byteStr.length);
+      for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+      blob0 = new Blob([arr], { type: 'image/png' });
+    } else {
+      const res0 = await fetch(afterSrc);
+      blob0 = await res0.blob();
+    }
+    const file  = new File([blob0], 'after.png', { type: 'image/png' });
 
     const nightPrompt = 'Same interior at night. Warm indoor lighting from lamps and ceiling lights, dark evening outside the windows, cozy ambiance. Keep all furniture, materials, colors, and layout exactly the same. Photorealistic.';
 
@@ -1466,11 +1474,11 @@ async function generateNight(btn, afterSrc, beforeSrc) {
 
     const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || '生成失敗');
+    if (!res.ok) throw new Error(data.error?.message || data.error || JSON.stringify(data));
 
     const img = data.data?.[0];
     const nightSrc = img?.url || (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
-    if (!nightSrc) throw new Error('画像取得失敗');
+    if (!nightSrc) throw new Error('画像取得失敗: ' + JSON.stringify(data));
 
     document.getElementById('dn-card')?.remove();
     showDayNight(afterSrc, nightSrc);
