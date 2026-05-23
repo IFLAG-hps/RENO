@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RENO.ai — 見せるだけで、決まる。</title>
+<title>RENO.ai — 見せるだけで、決まる</title>
 <meta name="description" content="施工後のイメージをAIが即時生成。QRコードで施主のスマホに渡すだけ。チャット型ヒアリング＋ビフォーアフター生成で成約率を上げる、工務店向けAIリフォーム提案ツール。月額5,000円から。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -80,6 +80,8 @@ h1{
   animation:fadeUp 0.7s 0.1s ease both;
 }
 h1 em{font-style:italic;color:var(--gold);}
+h1 .sp-br{display:none;}
+@media(max-width:768px){h1 .sp-br{display:block;}}
 .hero-sub-catch{
   font-family:'Cormorant Garamond',serif;font-size:clamp(16px,2.5vw,22px);
   color:var(--text2);font-weight:400;font-style:italic;
@@ -331,7 +333,7 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
 
   <div class="hero-badge">✦ AI Renovation Tool for Builders</div>
 
-  <h1>見せるだけで、<br><em>決まる。</em></h1>
+  <h1>見せるだけで、<br class="sp-br"><em>決まる</em></h1>
   <p class="hero-sub-catch">— The AI that closes deals.</p>
 
   <p class="hero-desc">
@@ -775,3 +777,4 @@ async function submitForm() {
 </script>
 </body>
 </html>
+
