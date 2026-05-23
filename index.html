@@ -51,8 +51,47 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 #header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white);}
 .h-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.12em;color:var(--text);}
 .h-badge{font-size:9px;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;border:1px solid rgba(160,120,56,0.3);padding:2px 6px;border-radius:3px;margin-left:8px;vertical-align:middle;}
-.h-reset{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:11px;padding:5px 10px;cursor:pointer;letter-spacing:0.04em;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:5px;}
-.h-reset:hover{color:var(--text);border-color:var(--border2);}
+.h-right{display:flex;align-items:center;gap:10px;}
+.h-usage{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.h-menu-btn{background:none;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s;flex-shrink:0;}
+.h-menu-btn:hover{border-color:var(--border2);background:var(--bg);}
+
+/* ── Menu Sheet ── */
+#menuSheet{
+  position:fixed;inset:0;background:rgba(0,0,0,0.25);
+  z-index:300;display:none;align-items:flex-end;
+  backdrop-filter:blur(2px);
+}
+#menuSheet.open{display:flex;}
+.menu-drawer{
+  width:100%;background:var(--white);
+  border-radius:16px 16px 0 0;
+  border-top:1px solid var(--border);
+  padding:0 0 32px;
+  animation:slideUp 0.25s ease;
+  box-shadow:0 -8px 40px rgba(0,0,0,0.1);
+}
+.menu-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 16px;}
+.menu-title{font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;padding:0 20px 10px;border-bottom:1px solid var(--border);}
+.menu-item{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;cursor:pointer;transition:background 0.12s;
+  border:none;background:none;width:100%;font-family:inherit;
+  text-align:left;
+}
+.menu-item:hover{background:var(--bg);}
+.menu-item:active{background:var(--bg2);}
+.menu-item-icon{
+  width:36px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.menu-item-text{flex:1;}
+.menu-item-label{font-size:14px;color:var(--text);font-weight:400;}
+.menu-item-desc{font-size:12px;color:var(--muted);margin-top:1px;}
+.menu-item-arrow{color:var(--border2);}
+.menu-divider{height:1px;background:var(--border);margin:4px 0;}
+.menu-version{font-size:11px;color:var(--muted);text-align:center;padding:16px 20px 0;letter-spacing:0.06em;}
 
 /* ── Chat ── */
 #chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;background:var(--bg);}
@@ -418,6 +457,45 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
   </div>
 </div>
 
+<!-- Menu Sheet -->
+<div id="menuSheet" onclick="closeMenuOuter(event)">
+  <div class="menu-drawer">
+    <div class="menu-handle"></div>
+    <div class="menu-title">メニュー</div>
+    <button class="menu-item" onclick="openCasesPanel();closeMenuSheet();">
+      <div class="menu-item-icon" style="background:#f4f2ee;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a07838" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <div class="menu-item-text">
+        <div class="menu-item-label">施工事例を管理</div>
+        <div class="menu-item-desc">事例写真の登録・編集</div>
+      </div>
+      <svg class="menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <button class="menu-item" onclick="openHistoryPanel();closeMenuSheet();">
+      <div class="menu-item-icon" style="background:#f4f2ee;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a07838" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="menu-item-text">
+        <div class="menu-item-label">ヒアリング履歴</div>
+        <div class="menu-item-desc">過去の施主との会話を確認</div>
+      </div>
+      <svg class="menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="menu-divider"></div>
+    <button class="menu-item" onclick="lockApp();closeMenuSheet();">
+      <div class="menu-item-icon" style="background:#f4f2ee;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a9490" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="menu-item-text">
+        <div class="menu-item-label">ロック</div>
+        <div class="menu-item-desc">PIN画面に戻る</div>
+      </div>
+    </button>
+    <div class="menu-version">RENO.ai AI Agent</div>
+  </div>
+</div>
+
 <!-- Cases Admin Panel -->
 <div id="casesPanel" onclick="closeCasesOuter(event)">
   <div class="cases-drawer">
@@ -496,19 +574,10 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
       <span class="h-logo">RENO.ai</span>
       <span class="h-badge">AI Agent</span>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="usage-badge" id="usageBadge"></div>
-      <button class="h-reset" onclick="lockApp()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        ロック
-      </button>
-      <button class="h-reset" onclick="openCasesPanel()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        事例
-      </button>
-      <button class="h-reset" onclick="openHistoryPanel()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        履歴
+    <div class="h-right">
+      <div class="h-usage" id="usageBadge"></div>
+      <button class="h-menu-btn" onclick="openMenuSheet()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
   </div>
@@ -1461,6 +1530,17 @@ function showUpgradeModal() {
 }
 function closeUpgradeModal() {
   document.getElementById('upgradeModal').classList.remove('open');
+}
+
+// ── Menu Sheet ──
+function openMenuSheet() {
+  document.getElementById('menuSheet').classList.add('open');
+}
+function closeMenuSheet() {
+  document.getElementById('menuSheet').classList.remove('open');
+}
+function closeMenuOuter(e) {
+  if (e.target === document.getElementById('menuSheet')) closeMenuSheet();
 }
 
 // ── Cases Panel ──
