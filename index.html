@@ -129,6 +129,64 @@ body{background:#0c0c0c;font-family:'DM Sans','Hiragino Sans',sans-serif;color:#
 #pdfOverlay p{color:#686868;font-size:13px;letter-spacing:0.06em;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* ── Cost Simulator card ── */
+.sim-card{
+  margin-top:10px;background:#111;border:1px solid #222;
+  border-radius:10px;padding:14px;
+}
+.sim-title{
+  font-size:11px;color:#7a6a50;letter-spacing:0.14em;
+  text-transform:uppercase;margin-bottom:12px;
+  display:flex;align-items:center;gap:6px;
+}
+.sim-section{margin-bottom:12px;}
+.sim-label{font-size:11px;color:#686868;margin-bottom:6px;letter-spacing:0.04em;}
+.sim-sizes{display:flex;gap:5px;flex-wrap:wrap;}
+.sim-sz{
+  background:#1a1a1a;border:1px solid #222;border-radius:5px;
+  padding:5px 10px;font-size:12px;color:#888;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.sim-sz.active{border-color:#c8a96e;color:#c8a96e;background:#1a1710;}
+.sim-items{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.sim-item{
+  display:flex;align-items:center;gap:7px;
+  background:#1a1a1a;border:1px solid #1e1e1e;
+  border-radius:5px;padding:7px 10px;cursor:pointer;
+  transition:all 0.15s;
+}
+.sim-item.active{border-color:#6a5030;background:#1a1710;}
+.sim-item input{display:none;}
+.sim-check{
+  width:14px;height:14px;border:1px solid #333;border-radius:3px;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;
+}
+.sim-item.active .sim-check{background:#c8a96e;border-color:#c8a96e;}
+.sim-item-label{font-size:12px;color:#777;transition:color 0.15s;}
+.sim-item.active .sim-item-label{color:#d0cdc8;}
+.sim-grades{display:flex;gap:5px;}
+.sim-grade{
+  flex:1;background:#1a1a1a;border:1px solid #222;border-radius:5px;
+  padding:7px 6px;font-size:11px;color:#666;cursor:pointer;
+  font-family:inherit;text-align:center;transition:all 0.15s;
+}
+.sim-grade.active{border-color:#c8a96e;color:#c8a96e;background:#1a1710;}
+.sim-result{
+  background:#141410;border:1px solid #2a2418;border-radius:8px;
+  padding:12px 14px;margin-top:4px;
+}
+.sim-result-label{font-size:10px;color:#7a6a50;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.sim-result-price{font-size:22px;font-weight:300;color:#c8a96e;letter-spacing:0.02em;}
+.sim-result-note{font-size:10px;color:#444;margin-top:4px;letter-spacing:0.02em;}
+.sim-confirm{
+  width:100%;margin-top:10px;background:linear-gradient(135deg,#c8a96e,#9a7238);
+  border:none;border-radius:7px;color:#0c0c0c;font-size:12px;font-weight:500;
+  padding:10px;cursor:pointer;font-family:inherit;letter-spacing:0.06em;
+  text-transform:uppercase;transition:opacity 0.15s;
+}
+.sim-confirm:hover{opacity:0.88;}
+
 /* ── Suggestion chips ── */
 .suggestions{
   display:flex;flex-wrap:wrap;gap:7px;
@@ -253,8 +311,10 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 - 例（スタイルを聞く場面）: [SUGGESTIONS: モダン, ナチュラル, 和風, インダストリアル, 北欧風]
 - 例（箇所を聞く場面）: [SUGGESTIONS: 床材, 壁紙, キッチン設備, 照明, 収納]
 - 例（予算を聞く場面）: [SUGGESTIONS: 50万円以下, 50〜100万円, 100〜200万円, 200万円以上]
-- 例（画像生成後）: [SUGGESTIONS: 別の箇所も試す, スタイルを変えてみる, これで進めたい, 提案書を作成]
-- [GENERATE_IMAGE:...] がある場合は [SUGGESTIONS:...] は不要
+- 例（画像生成後）: [SUGGESTIONS: 別の箇所も試す, スタイルを変えてみる, 概算を見る, 提案書を作成]
+- 例（予算の話が出たとき）: [SUGGESTIONS: 概算を見る, 50万円以下, 50〜100万円, 100〜200万円, 200万円以上]
+- ユーザーが「概算を見る」「費用を知りたい」「いくらかかる」と言ったら [SHOW_SIMULATOR] を単独で出力する
+- [GENERATE_IMAGE:...] または [SHOW_SIMULATOR] がある場合は [SUGGESTIONS:...] は不要
 
 ## 画像プロンプトのルール
 - 英語で記述する
@@ -707,6 +767,146 @@ async function generatePDF(afterSrc, beforeSrc) {
   }
 }
 
+// ── Cost Simulator ──
+const COST_DATA = {
+  sizes: [
+    { label:'〜6畳', m2: 10 },
+    { label:'8畳',   m2: 13 },
+    { label:'10畳',  m2: 16 },
+    { label:'12畳〜',m2: 20 },
+  ],
+  items: [
+    { key:'floor',   label:'床材',       base:[8,15],   unit:'m2' },
+    { key:'wall',    label:'壁紙',       base:[1,2.5],  unit:'m2' },
+    { key:'kitchen', label:'キッチン',   base:[60,180], unit:'flat' },
+    { key:'bath',    label:'浴室',       base:[60,150], unit:'flat' },
+    { key:'toilet',  label:'トイレ',     base:[15,50],  unit:'flat' },
+    { key:'wash',    label:'洗面所',     base:[15,50],  unit:'flat' },
+    { key:'light',   label:'照明',       base:[8,30],   unit:'flat' },
+    { key:'storage', label:'収納',       base:[15,60],  unit:'flat' },
+  ],
+  grades: [
+    { key:'eco',   label:'エコノミー', mult:0.75 },
+    { key:'std',   label:'スタンダード', mult:1.0 },
+    { key:'pre',   label:'プレミアム',   mult:1.5 },
+  ],
+};
+
+let simState = { sizeIdx:1, items:new Set(['floor','wall']), gradeIdx:1 };
+
+function calcCost() {
+  const m2 = COST_DATA.sizes[simState.sizeIdx].m2;
+  const mult = COST_DATA.grades[simState.gradeIdx].mult;
+  let lo = 0, hi = 0;
+  COST_DATA.items.forEach(item => {
+    if (!simState.items.has(item.key)) return;
+    if (item.unit === 'm2') { lo += item.base[0] * m2; hi += item.base[1] * m2; }
+    else                    { lo += item.base[0] * 10000; hi += item.base[1] * 10000; }
+  });
+  lo = Math.round(lo * mult / 10000) * 10000;
+  hi = Math.round(hi * mult / 10000) * 10000;
+  return { lo, hi };
+}
+
+function fmtMoney(n) {
+  if (n >= 1000000) return (n/10000).toFixed(0) + '万円';
+  return (n/10000).toFixed(0) + '万円';
+}
+
+function updateSimResult() {
+  const { lo, hi } = calcCost();
+  const el = document.getElementById('sim-price');
+  if (!el) return;
+  if (lo === 0) { el.textContent = '項目を選択してください'; return; }
+  el.textContent = `${fmtMoney(lo)} 〜 ${fmtMoney(hi)}`;
+}
+
+function showSimulator() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg agent'; div.id = 'sim-msg';
+
+  const sizeBtns = COST_DATA.sizes.map((s,i) =>
+    `<button class="sim-sz ${i===simState.sizeIdx?'active':''}" onclick="simSetSize(${i})">${s.label}</button>`
+  ).join('');
+
+  const itemBtns = COST_DATA.items.map(item =>
+    `<div class="sim-item ${simState.items.has(item.key)?'active':''}" onclick="simToggleItem('${item.key}')">
+      <div class="sim-check">
+        ${simState.items.has(item.key)?'<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#0c0c0c" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>':''}
+      </div>
+      <span class="sim-item-label">${item.label}</span>
+    </div>`
+  ).join('');
+
+  const gradeBtns = COST_DATA.grades.map((g,i) =>
+    `<button class="sim-grade ${i===simState.gradeIdx?'active':''}" onclick="simSetGrade(${i})">${g.label}</button>`
+  ).join('');
+
+  const { lo, hi } = calcCost();
+
+  div.innerHTML = `<div class="avatar agent">${agentIcon}</div>
+    <div class="bubble agent">
+      <div class="sim-card">
+        <div class="sim-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          工事費 概算シミュレーター
+        </div>
+        <div class="sim-section">
+          <div class="sim-label">お部屋の広さ</div>
+          <div class="sim-sizes">${sizeBtns}</div>
+        </div>
+        <div class="sim-section">
+          <div class="sim-label">施工箇所（複数選択可）</div>
+          <div class="sim-items">${itemBtns}</div>
+        </div>
+        <div class="sim-section">
+          <div class="sim-label">グレード</div>
+          <div class="sim-grades">${gradeBtns}</div>
+        </div>
+        <div class="sim-result">
+          <div class="sim-result-label">概算費用</div>
+          <div class="sim-result-price" id="sim-price">${lo?fmtMoney(lo)+' 〜 '+fmtMoney(hi):'項目を選択してください'}</div>
+          <div class="sim-result-note">※ 相場の目安です。実際の費用は現地調査にてご確認ください。</div>
+        </div>
+        <button class="sim-confirm" onclick="simConfirm()">この内容で担当者に相談する</button>
+      </div>
+    </div>`;
+  chat.appendChild(div);
+  scrollBottom();
+}
+
+function simSetSize(i) {
+  simState.sizeIdx = i;
+  refreshSim();
+}
+function simToggleItem(key) {
+  if (simState.items.has(key)) simState.items.delete(key);
+  else simState.items.add(key);
+  refreshSim();
+}
+function simSetGrade(i) {
+  simState.gradeIdx = i;
+  refreshSim();
+}
+function refreshSim() {
+  const old = document.getElementById('sim-msg');
+  if (!old) return;
+  old.remove();
+  showSimulator();
+}
+function simConfirm() {
+  const { lo, hi } = calcCost();
+  const size = COST_DATA.sizes[simState.sizeIdx].label;
+  const items = [...simState.items].map(k => COST_DATA.items.find(i=>i.key===k)?.label).join('・');
+  const grade = COST_DATA.grades[simState.gradeIdx].label;
+  const text = `概算シミュレーション結果：${size}・${items}・${grade}グレードで${fmtMoney(lo)}〜${fmtMoney(hi)}程度です。この内容で進めたいと思います。`;
+  document.getElementById('sim-msg')?.remove();
+  addUserMessage(text);
+  history.push({ role:'user', content: text });
+  callAgent();
+}
+
 async function sendMessage() {
   const input = document.getElementById('userInput');
   const text  = input.value.trim();
@@ -736,6 +936,7 @@ async function callAgent() {
 
     // Parse tags
     const genMatch  = raw.match(/\[GENERATE_IMAGE:\s*([\s\S]+?)\]/);
+    const simMatch  = raw.match(/\[SHOW_SIMULATOR\]/);
     const sugMatch  = raw.match(/\[SUGGESTIONS:\s*(.+?)\]/);
     const suggestions = sugMatch
       ? sugMatch[1].split(',').map(s => s.trim()).filter(Boolean)
@@ -744,6 +945,7 @@ async function callAgent() {
     // Clean display text
     let display = raw
       .replace(/\[GENERATE_IMAGE:[\s\S]+?\]/, '')
+      .replace(/\[SHOW_SIMULATOR\]/, '')
       .replace(/\[SUGGESTIONS:.+?\]/, '')
       .trim();
 
@@ -751,6 +953,10 @@ async function callAgent() {
       if (display) addAgentMessage(display);
       history.push({ role:'assistant', content: raw });
       showUploadCard(genMatch[1].trim());
+    } else if (simMatch) {
+      if (display) addAgentMessage(display);
+      history.push({ role:'assistant', content: raw });
+      showSimulator();
     } else {
       addAgentMessage(display, null, null, suggestions);
       history.push({ role:'assistant', content: raw });
