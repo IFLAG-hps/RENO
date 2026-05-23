@@ -187,6 +187,36 @@ body{background:#0c0c0c;font-family:'DM Sans','Hiragino Sans',sans-serif;color:#
 }
 .sim-confirm:hover{opacity:0.88;}
 
+/* ── Day / Night toggle ── */
+.daynight-wrap{margin-top:10px;}
+.daynight-tabs{
+  display:flex;gap:0;border:1px solid #222;border-radius:7px;overflow:hidden;margin-bottom:8px;
+}
+.dn-tab{
+  flex:1;padding:7px;font-size:12px;color:#666;cursor:pointer;
+  font-family:inherit;background:#111;border:none;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  transition:all 0.15s;letter-spacing:0.04em;
+}
+.dn-tab:first-child{border-right:1px solid #222;}
+.dn-tab.active{background:#1a1710;color:#c8a96e;}
+.dn-img-wrap{position:relative;border-radius:8px;overflow:hidden;}
+.dn-img-wrap img{width:100%;display:block;border-radius:8px;max-height:260px;object-fit:cover;}
+.dn-label{
+  position:absolute;bottom:8px;right:8px;
+  background:rgba(10,10,10,0.8);font-size:10px;
+  padding:3px 8px;border-radius:4px;letter-spacing:0.1em;
+  backdrop-filter:blur(4px);
+}
+.dn-generating{
+  display:flex;align-items:center;justify-content:center;
+  height:160px;background:#111;border-radius:8px;
+  color:#444;font-size:12px;gap:10px;
+}
+
+.share-btn.night{background:#1e1e1e;border:1px solid #2a2a2a;color:#8090b0;}
+.share-btn.night:hover{border-color:#4a5070;color:#a0b0d0;}
+
 /* ── Suggestion chips ── */
 .suggestions{
   display:flex;flex-wrap:wrap;gap:7px;
@@ -452,6 +482,10 @@ function addAgentMessage(text, afterSrc = null, beforeSrc = null, suggestions = 
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         保存
       </a>
+      <button class="share-btn night" onclick="generateNight(this,'${afterSrc}','${beforeSrc}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        昼/夜
+      </button>
       <button class="share-btn pdf" onclick="generatePDF('${afterSrc}','${beforeSrc}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         提案書PDF
@@ -588,6 +622,115 @@ async function shareNative(src) {
     }
   } catch(e) {
     if (e.name !== 'AbortError') alert('共有できませんでした: ' + e.message);
+  }
+}
+
+// ── Day / Night Preview ──
+async function generateNight(btn, afterSrc, beforeSrc) {
+  btn.disabled = true;
+  btn.style.opacity = '0.4';
+
+  // Show loading card
+  const chat = document.getElementById('chat');
+  const card = document.createElement('div');
+  card.className = 'msg agent'; card.id = 'dn-card';
+  card.innerHTML = `<div class="avatar agent">${agentIcon}</div>
+    <div class="bubble agent">
+      夜のイメージを生成中です...
+      <div class="dn-generating">
+        <div class="spinner" style="width:20px;height:20px;border-width:1.5px;"></div>
+        夜の照明で再生成しています
+      </div>
+    </div>`;
+  chat.appendChild(card); scrollBottom();
+
+  try {
+    // Fetch the after image as a file
+    const res0 = await fetch(afterSrc);
+    const blob0 = await res0.blob();
+    const file  = new File([blob0], 'after.png', { type: blob0.type });
+
+    const nightPrompt = 'Same interior at night. Warm indoor lighting from lamps and ceiling lights, dark evening outside the windows, cozy ambiance. Keep all furniture, materials, colors, and layout exactly the same. Photorealistic.';
+
+    const form = new FormData();
+    form.append('pin', CORRECT_PIN);
+    form.append('prompt', nightPrompt);
+    form.append('image', file, 'after.png');
+
+    const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || '生成失敗');
+
+    const img = data.data?.[0];
+    const nightSrc = img?.url || (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+    if (!nightSrc) throw new Error('画像取得失敗');
+
+    document.getElementById('dn-card')?.remove();
+    showDayNight(afterSrc, nightSrc);
+
+  } catch(e) {
+    document.getElementById('dn-card')?.remove();
+    addAgentMessage(`夜のイメージ生成に失敗しました。\n${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '';
+  }
+}
+
+function showDayNight(daySrc, nightSrc) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg agent'; div.id = 'daynight-msg';
+
+  div.innerHTML = `<div class="avatar agent">${agentIcon}</div>
+    <div class="bubble agent">
+      昼と夜のイメージを生成しました！照明の雰囲気の違いをご確認ください。
+      <div class="daynight-wrap">
+        <div class="daynight-tabs">
+          <button class="dn-tab active" id="dn-day-tab" onclick="switchDN('day','${daySrc}','${nightSrc}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            昼間
+          </button>
+          <button class="dn-tab" id="dn-night-tab" onclick="switchDN('night','${daySrc}','${nightSrc}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            夜間
+          </button>
+        </div>
+        <div class="dn-img-wrap">
+          <img id="dn-img" src="${daySrc}" alt="day/night">
+          <span class="dn-label" id="dn-label" style="color:#c8a06e;">☀ 昼間</span>
+        </div>
+        <div class="share-bar" style="margin-top:8px;">
+          <button class="share-btn line" onclick="shareNative(document.getElementById('dn-img').src)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            共有
+          </button>
+          <a class="share-btn dl" id="dn-dl" href="${daySrc}" download="reno-daynight.png">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            保存
+          </a>
+        </div>
+      </div>
+    </div>`;
+  chat.appendChild(div);
+  scrollBottom();
+  renderSuggestions(['別の箇所も試す', '概算を見る', '提案書を作成']);
+}
+
+function switchDN(mode, daySrc, nightSrc) {
+  const img   = document.getElementById('dn-img');
+  const label = document.getElementById('dn-label');
+  const dl    = document.getElementById('dn-dl');
+  const dayTab   = document.getElementById('dn-day-tab');
+  const nightTab = document.getElementById('dn-night-tab');
+  if (mode === 'day') {
+    img.src = daySrc; dl.href = daySrc;
+    label.textContent = '☀ 昼間'; label.style.color = '#c8a06e';
+    dayTab.classList.add('active'); nightTab.classList.remove('active');
+  } else {
+    img.src = nightSrc; dl.href = nightSrc;
+    label.textContent = '🌙 夜間'; label.style.color = '#8090c0';
+    nightTab.classList.add('active'); dayTab.classList.remove('active');
   }
 }
 
