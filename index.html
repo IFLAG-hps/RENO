@@ -211,6 +211,48 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 .case-chat-tag{font-size:10px;color:var(--gold);}
 .case-empty{font-size:12px;color:var(--muted);text-align:center;padding:16px 0;}
 
+/* ── Guest PIN Panel ── */
+#guestPinPanel{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:300;display:none;justify-content:flex-end;backdrop-filter:blur(2px);}
+#guestPinPanel.open{display:flex;}
+.gpin-drawer{width:100%;max-width:380px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden;animation:slideIn 0.25s ease;}
+.gpin-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.gpin-title{font-size:13px;color:var(--gold);letter-spacing:0.08em;}
+.gpin-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0;transition:color 0.15s;}
+.gpin-close:hover{color:var(--text);}
+.gpin-body{flex:1;overflow-y:auto;padding:16px;}
+.gpin-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;}
+.gpin-form-title{font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;}
+.gpin-row{margin-bottom:10px;}
+.gpin-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:5px;}
+.gpin-input{width:100%;background:var(--white);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:9px 12px;outline:none;font-family:inherit;transition:border-color 0.2s;}
+.gpin-input:focus{border-color:var(--gold);}
+.gpin-days{display:flex;gap:6px;}
+.gpin-day{flex:1;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:8px 4px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit;text-align:center;transition:all 0.15s;}
+.gpin-day.active{border-color:var(--gold);color:var(--gold);background:var(--gold-bg);}
+.gpin-uses{display:flex;gap:6px;}
+.gpin-use{flex:1;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:8px 4px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit;text-align:center;transition:all 0.15s;}
+.gpin-use.active{border-color:var(--gold);color:var(--gold);background:var(--gold-bg);}
+.gpin-issue-btn{width:100%;background:var(--text);border:none;border-radius:7px;color:var(--white);font-size:13px;font-weight:500;padding:11px;cursor:pointer;font-family:inherit;letter-spacing:0.06em;margin-top:4px;transition:background 0.15s;}
+.gpin-issue-btn:hover{background:#333;}
+.gpin-issue-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.gpin-result{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);border-radius:10px;padding:16px;margin-bottom:16px;text-align:center;animation:fadeIn 0.3s ease;}
+.gpin-result-label{font-size:10px;color:var(--gold);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;}
+.gpin-result-pin{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:600;color:var(--text);letter-spacing:0.3em;margin-bottom:6px;}
+.gpin-result-meta{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;}
+.gpin-result-btns{display:flex;gap:8px;}
+.gpin-copy-btn{flex:1;background:var(--white);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-size:12px;padding:9px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.gpin-copy-btn:hover{border-color:var(--gold);color:var(--gold);}
+.gpin-list-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.gpin-list-pin{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--text);letter-spacing:0.14em;flex-shrink:0;}
+.gpin-list-info{flex:1;min-width:0;}
+.gpin-list-label{font-size:13px;color:var(--text);margin-bottom:2px;}
+.gpin-list-meta{font-size:11px;color:var(--muted);}
+.gpin-list-badge{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;display:inline-block;margin-top:3px;}
+.gpin-list-badge.active{background:rgba(74,154,90,0.1);color:var(--green);}
+.gpin-list-badge.expired{background:var(--bg2);color:var(--muted);}
+.gpin-list-del{background:none;border:none;color:var(--border2);cursor:pointer;padding:4px;transition:color 0.15s;flex-shrink:0;}
+.gpin-list-del:hover{color:var(--red);}
+
 /* ── History Panel ── */
 #historyPanel{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:300;display:none;justify-content:flex-end;backdrop-filter:blur(2px);}
 #historyPanel.open{display:flex;}
@@ -485,7 +527,16 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
   <div class="menu-drawer">
     <div class="menu-handle"></div>
     <div class="menu-title">メニュー</div>
-    <button class="menu-item" onclick="openCasesPanel();closeMenuSheet();">
+    <button class="menu-item" onclick="openGuestPinPanel();closeMenuSheet();">
+      <div class="menu-item-icon" style="background:#f0faf2;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a9a5a" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
+      </div>
+      <div class="menu-item-text">
+        <div class="menu-item-label">施主用PIN発行</div>
+        <div class="menu-item-desc">QRコードで施主に渡す</div>
+      </div>
+      <svg class="menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
       <div class="menu-item-icon" style="background:#f4f2ee;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a07838" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       </div>
@@ -519,6 +570,20 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
     <div style="text-align:center;padding:6px 20px 0;">
       <a href="/lp.html" target="_blank" style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">サービス紹介ページ →</a>
     </div>
+  </div>
+</div>
+
+<!-- Guest PIN Panel -->
+<div id="guestPinPanel" onclick="closeGuestPinOuter(event)">
+  <div class="gpin-drawer">
+    <div class="gpin-head">
+      <span class="gpin-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle;margin-right:5px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        施主用PIN発行
+      </span>
+      <button class="gpin-close" onclick="closeGuestPinPanel()">✕</button>
+    </div>
+    <div class="gpin-body" id="gpinBody"></div>
   </div>
 </div>
 
@@ -1573,6 +1638,162 @@ function showUpgradeModal() {
 }
 function closeUpgradeModal() {
   document.getElementById('upgradeModal').classList.remove('open');
+}
+
+// ── Guest PIN Panel ──
+let gpinDays = 7;
+let gpinUses = 3;
+
+function openGuestPinPanel() {
+  document.getElementById('guestPinPanel').classList.add('open');
+  renderGpinPanel();
+}
+function closeGuestPinPanel() {
+  document.getElementById('guestPinPanel').classList.remove('open');
+}
+function closeGuestPinOuter(e) {
+  if (e.target === document.getElementById('guestPinPanel')) closeGuestPinPanel();
+}
+
+function renderGpinPanel() {
+  document.getElementById('gpinBody').innerHTML = `
+    <div class="gpin-form">
+      <div class="gpin-form-title">新しいPINを発行</div>
+      <div class="gpin-row">
+        <label class="gpin-label">施主のお名前（メモ用）</label>
+        <input type="text" id="gpinLabel" class="gpin-input" placeholder="例：山田様">
+      </div>
+      <div class="gpin-row">
+        <label class="gpin-label">有効期限</label>
+        <div class="gpin-days">
+          ${[3,7,14].map(d => `<button class="gpin-day ${gpinDays===d?'active':''}" onclick="gpinSetDays(${d})">${d}日間</button>`).join('')}
+        </div>
+      </div>
+      <div class="gpin-row">
+        <label class="gpin-label">使用回数</label>
+        <div class="gpin-uses">
+          ${[3,5,10].map(u => `<button class="gpin-use ${gpinUses===u?'active':''}" onclick="gpinSetUses(${u})">${u}回</button>`).join('')}
+        </div>
+      </div>
+      <button class="gpin-issue-btn" id="gpinIssueBtn" onclick="issueGuestPin()">PINを発行する</button>
+    </div>
+    <div id="gpinResult"></div>
+    <div id="gpinList"></div>`;
+  loadGuestPins();
+}
+
+function gpinSetDays(d) { gpinDays = d; renderGpinPanel(); }
+function gpinSetUses(u) { gpinUses = u; renderGpinPanel(); }
+
+async function issueGuestPin() {
+  const label = document.getElementById('gpinLabel').value.trim() || '施主様';
+  const btn = document.getElementById('gpinIssueBtn');
+  btn.disabled = true; btn.textContent = '発行中...';
+  try {
+    const res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: sessionToken, type: 'create_guest_pin', label, days: gpinDays, max_uses: gpinUses })
+    });
+    const data = await res.json();
+    if (data.pin) showGpinResult(data);
+    else throw new Error(data.error || '発行失敗');
+  } catch(e) {
+    alert('エラー: ' + e.message);
+    btn.disabled = false; btn.textContent = 'PINを発行する';
+  }
+}
+
+function showGpinResult(data) {
+  const expires = new Date(data.expires_at).toLocaleDateString('ja-JP', { month:'long', day:'numeric' });
+  const url = `${location.origin}${location.pathname}`;
+  document.getElementById('gpinResult').innerHTML = `
+    <div class="gpin-result">
+      <div class="gpin-result-label">✦ 発行完了</div>
+      <div class="gpin-result-pin">${data.pin}</div>
+      <div class="gpin-result-meta">
+        ${data.label}・${gpinDays}日間有効（${expires}まで）<br>
+        使用回数：${data.max_uses}回まで
+      </div>
+      <div id="gpinQrWrap" style="margin:0 auto 12px;width:160px;height:160px;background:var(--bg2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;">QR生成中...</div>
+      <div class="gpin-result-btns">
+        <button class="gpin-copy-btn" onclick="copyGpinInfo('${data.pin}','${url}')">
+          📋 PINをコピー
+        </button>
+        <button class="gpin-copy-btn" onclick="shareGpin('${data.pin}','${url}','${data.label}')">
+          📤 共有
+        </button>
+      </div>
+    </div>`;
+  generateQR(data.pin, url);
+  loadGuestPins();
+}
+
+async function generateQR(pin, baseUrl) {
+  // QR code using API
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(baseUrl + '?pin=' + pin)}`;
+  const wrap = document.getElementById('gpinQrWrap');
+  if (!wrap) return;
+  wrap.innerHTML = `<img src="${qrUrl}" width="160" height="160" style="border-radius:6px;display:block;" alt="QR">`;
+}
+
+function copyGpinInfo(pin, url) {
+  const text = `RENO.ai リフォームシミュレーター\nPIN: ${pin}\n${url}`;
+  navigator.clipboard.writeText(text).then(() => alert('コピーしました！'));
+}
+
+async function shareGpin(pin, url, label) {
+  const text = `【RENO.ai】${label}様\nリフォームのイメージを確認できます。\n\nPIN番号: ${pin}\n${url}\n\n※有効期限・回数制限があります。`;
+  if (navigator.share) {
+    await navigator.share({ title: 'RENO.ai', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('テキストをコピーしました！'));
+  }
+}
+
+async function loadGuestPins() {
+  const listEl = document.getElementById('gpinList');
+  if (!listEl) return;
+  try {
+    const res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: sessionToken, type: 'get_guest_pins' })
+    });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      listEl.innerHTML = '';
+      return;
+    }
+    const now = new Date();
+    listEl.innerHTML = `
+      <div style="font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">発行済みPIN一覧</div>
+      ${data.map(g => {
+        const expired = new Date(g.expires_at) < now || !g.is_active;
+        const expires = new Date(g.expires_at).toLocaleDateString('ja-JP', { month:'short', day:'numeric' });
+        return `<div class="gpin-list-item">
+          <div class="gpin-list-pin">${g.pin}</div>
+          <div class="gpin-list-info">
+            <div class="gpin-list-label">${g.label || '施主様'}</div>
+            <div class="gpin-list-meta">${expires}まで・${g.use_count}/${g.max_uses}回使用</div>
+            <span class="gpin-list-badge ${expired ? 'expired' : 'active'}">${expired ? '期限切れ' : '有効'}</span>
+          </div>
+          <button class="gpin-list-del" onclick="deleteGuestPin('${g.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`;
+      }).join('')}`;
+  } catch(e) {}
+}
+
+async function deleteGuestPin(id) {
+  if (!confirm('このPINを削除しますか？')) return;
+  await fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: sessionToken, type: 'delete_guest_pin', id })
+  });
+  loadGuestPins();
 }
 
 // ── Menu Sheet ──
