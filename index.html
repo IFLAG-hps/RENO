@@ -766,8 +766,8 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 施主とフレンドリーにチャットし、要望をヒアリングして施工後のビジュアルイメージ生成を提案します。
 
 ## 会話の流れ
-1. 温かく挨拶し、どの部屋をリフォームしたいか聞く
-2. 変えたい箇所を具体的に聞く（床・壁・キッチンなど）
+1. 【最優先】まだ写真が送られていない場合、必ず最初に「お部屋の写真を送ってください」と促す。写真なしではビフォーアフターを生成できないため、他の質問より先に写真を求める。
+2. 写真が届いたら、変えたい箇所を聞く（床・壁・キッチンなど）
 3. 好みのスタイルを聞く
 4. 十分な情報が集まったら画像生成を提案し [GENERATE_IMAGE:...] を出力
 
@@ -775,7 +775,7 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 
 ### [SUGGESTIONS: 選択肢1, 選択肢2, ...]
 毎回の返答の末尾に付ける。文脈に合った3〜5個の短い日本語。
-- 部屋を聞く: [SUGGESTIONS: リビング, キッチン, 浴室・洗面所, 寝室, 玄関]
+- 写真を促すとき: [SUGGESTIONS: 📷 写真を撮る・選ぶ]
 - 箇所を聞く: [SUGGESTIONS: 床材, 壁紙, キッチン設備, 照明, 収納]
 - スタイルを聞く: [SUGGESTIONS: モダン, ナチュラル, 和風, インダストリアル, 北欧風]
 - 予算を聞く: [SUGGESTIONS: 50万円以下, 50〜100万円, 100〜200万円, 200万円以上]
@@ -799,7 +799,8 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 - [GENERATE_IMAGE] または [SHOW_SIMULATOR] または [SHOW_MATERIAL] または [SHOW_CASES] がある場合は [SUGGESTIONS] は不要
 - 返答は2〜3文と短く
 - 一度に聞く質問は1つ
-- 親しみやすい言葉を使う`;
+- 親しみやすい言葉を使う
+- 写真が送られるまでは部屋名やスタイルの質問をせず、写真を促し続ける`;
 
 
 // ── PIN & Token Auth ──
@@ -888,9 +889,9 @@ function initChat() {
   chatStarted = true;
   fetchUsage();
   addAgentMessage(
-    'こんにちは！RENO.aiへようこそ。\nどのお部屋をリフォームしたいとお考えですか？',
+    'こんにちは！RENO.aiへようこそ。\nまず、リフォームしたいお部屋の写真を撮って送ってください📷\n写真をもとにビフォーアフターを生成します！',
     null, null,
-    ['リビング', 'キッチン', '浴室・洗面所', '寝室', '玄関']
+    ['📷 写真を撮る・選ぶ']
   );
 }
 
@@ -933,6 +934,11 @@ function renderSuggestions(chips) {
 }
 
 function tapChip(text) {
+  if (text === '📷 写真を撮る・選ぶ') {
+    // 写真アップロードUIを直接開く
+    showUploadCard('リフォームしたいお部屋の写真を選んでください');
+    return;
+  }
   addUserMessage(text);
   history.push({ role:'user', content: text });
   callAgent();
