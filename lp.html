@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RENO.ai — 見せるだけで、決まる。</title>
-<meta name="description" content="施工後のイメージをAIが即時生成。商談中にビフォーアフターを見せて成約率を上げる、工務店向けAIリフォーム提案ツール。月額3,000円から。">
+<meta name="description" content="施工後のイメージをAIが即時生成。QRコードで施主のスマホに渡すだけ。チャット型ヒアリング＋ビフォーアフター生成で成約率を上げる、工務店向けAIリフォーム提案ツール。月額5,000円から。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -145,21 +145,64 @@ h2{font-family:'Cormorant Garamond',serif;font-size:clamp(30px,5vw,50px);font-we
 .problem-title{font-size:14px;color:var(--text);font-weight:500;margin-bottom:6px;}
 .problem-desc{font-size:13px;color:var(--muted);line-height:1.65;}
 
-/* ── HOW ── */
-#how{background:var(--white);}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:40px;margin-top:50px;}
-.step-num{
-  width:44px;height:44px;border-radius:50%;
+/* ── HOW / QR Flow ── */
+.qr-flow{
+  display:flex;align-items:flex-start;gap:0;
+  overflow-x:auto;padding-bottom:8px;
+  -webkit-overflow-scrolling:touch;
+}
+.qr-step{
+  flex:1;min-width:130px;text-align:center;padding:0 8px;
+}
+.qr-step-icon{
+  width:52px;height:52px;border-radius:14px;
   background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);
-  margin-bottom:16px;
+  margin:0 auto 12px;color:var(--gold);
 }
-.step-title{font-size:15px;color:var(--text);font-weight:500;margin-bottom:6px;}
-.step-desc{font-size:13px;color:var(--muted);line-height:1.65;}
-.step-arrow{display:none;}
+.qr-step-num{font-size:10px;color:var(--muted);letter-spacing:0.1em;margin-bottom:6px;}
+.qr-step-title{font-size:13px;color:var(--text);font-weight:500;margin-bottom:5px;}
+.qr-step-desc{font-size:12px;color:var(--muted);line-height:1.55;}
+.qr-arrow{
+  font-size:18px;color:var(--border2);flex-shrink:0;
+  padding-top:14px;align-self:flex-start;
+}
 
-/* ── FEATURES ── */
+/* Diff box */
+.diff-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  padding:24px;margin-top:48px;
+}
+.diff-label{
+  font-size:10px;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;
+  margin-bottom:18px;
+}
+.diff-grid{display:flex;flex-direction:column;gap:16px;}
+.diff-item{display:flex;gap:14px;align-items:flex-start;}
+.diff-check{
+  width:22px;height:22px;border-radius:50%;background:var(--gold-bg);
+  border:1px solid rgba(160,120,56,0.25);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--gold);margin-top:2px;
+}
+.diff-title{font-size:14px;color:var(--text);font-weight:500;margin-bottom:3px;}
+.diff-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+
+/* Pricing note */
+.pricing-note{
+  text-align:center;margin-top:20px;
+  font-size:13px;color:var(--muted);
+}
+
+@media(max-width:600px){
+  .qr-flow{flex-wrap:nowrap;}
+  .qr-arrow{display:none;}
+  .qr-step{min-width:110px;}
+}
+
+/* ── HOW ── */
+#how{background:var(--white);}
+
 #features{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
 .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:40px;}
 .feature-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px;transition:box-shadow 0.2s,border-color 0.2s;}
@@ -342,22 +385,82 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
 <section id="how">
   <div class="container">
     <span class="section-label reveal">使い方</span>
-    <h2 class="reveal">3ステップで<br>商談が変わる</h2>
-    <div class="steps">
-      <div class="step reveal">
-        <div class="step-num">1</div>
-        <div class="step-title">部屋の写真を撮る</div>
-        <div class="step-desc">商談中にスマホで今のお部屋を撮影してアップロード。特別な機材は不要です。</div>
+    <h2 class="reveal">QRコード1枚で<br>施主が動き出す</h2>
+    <p class="section-desc reveal" style="margin-bottom:48px;">工務店はQRを渡すだけ。施主が自分のスマホで体験し、家族に共有し、商談へと進みます。</p>
+
+    <!-- QR Flow -->
+    <div class="qr-flow reveal">
+      <div class="qr-step">
+        <div class="qr-step-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+        </div>
+        <div class="qr-step-num">01</div>
+        <div class="qr-step-title">QRを掲示</div>
+        <div class="qr-step-desc">店頭・名刺・チラシにQRコードを印刷して置くだけ。</div>
       </div>
-      <div class="step reveal">
-        <div class="step-num">2</div>
-        <div class="step-title">AIがヒアリング</div>
-        <div class="step-desc">チャット形式で施主の要望を引き出します。部屋・スタイル・予算を自然な会話で確認。</div>
+      <div class="qr-arrow">→</div>
+      <div class="qr-step">
+        <div class="qr-step-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+        </div>
+        <div class="qr-step-num">02</div>
+        <div class="qr-step-title">施主が読み込む</div>
+        <div class="qr-step-desc">施主が自分のスマホで読み込み、その場でAIと会話開始。</div>
       </div>
-      <div class="step reveal">
-        <div class="step-num">3</div>
-        <div class="step-title">30秒でイメージ生成</div>
-        <div class="step-desc">AIが施工後のリアルなイメージを生成。LINEで共有、提案書PDFも自動作成。</div>
+      <div class="qr-arrow">→</div>
+      <div class="qr-step">
+        <div class="qr-step-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="qr-step-num">03</div>
+        <div class="qr-step-title">写真で試してみる</div>
+        <div class="qr-step-desc">今のお部屋を撮影してアップ。30秒で施工後イメージが完成。</div>
+      </div>
+      <div class="qr-arrow">→</div>
+      <div class="qr-step">
+        <div class="qr-step-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="qr-step-num">04</div>
+        <div class="qr-step-title">家族にLINEで共有</div>
+        <div class="qr-step-desc">「これどう思う？」で家族会議が始まり、意思決定が早まる。</div>
+      </div>
+      <div class="qr-arrow">→</div>
+      <div class="qr-step qr-step-last">
+        <div class="qr-step-icon" style="background:var(--text);border-color:var(--text);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="qr-step-num" style="color:var(--gold);">05</div>
+        <div class="qr-step-title">商談・成約へ</div>
+        <div class="qr-step-desc">温まったリードが来店。工務店は提案に集中できる。</div>
+      </div>
+    </div>
+
+    <!-- 差別化ポイント -->
+    <div class="diff-box reveal">
+      <div class="diff-label">RENO.aiだけの強み</div>
+      <div class="diff-grid">
+        <div class="diff-item">
+          <div class="diff-check">✓</div>
+          <div>
+            <div class="diff-title">チャット型ヒアリングは業界唯一</div>
+            <div class="diff-desc">LIXILなど大手は自社製品専用。汎用チャット型AIは競合なし。</div>
+          </div>
+        </div>
+        <div class="diff-item">
+          <div class="diff-check">✓</div>
+          <div>
+            <div class="diff-title">施主が自分で動く仕組み</div>
+            <div class="diff-desc">工務店の手を借りず施主が体験→共有→来店。営業コストがゼロに近づく。</div>
+          </div>
+        </div>
+        <div class="diff-item">
+          <div class="diff-check">✓</div>
+          <div>
+            <div class="diff-title">1件の成約で費用回収</div>
+            <div class="diff-desc">リフォームの平均単価は100万円超。月額費用は1件の追加成約で数年分が回収できる。</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -407,31 +510,31 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
 <section id="pricing">
   <div class="container">
     <span class="section-label reveal">料金</span>
-    <h2 class="reveal">シンプルな料金体系</h2>
-    <p class="section-desc reveal">初期費用・導入費用はゼロ。月額のみでスタートできます。</p>
+    <h2 class="reveal">使い方に合わせた<br>シンプルな料金</h2>
+    <p class="section-desc reveal">初期費用・導入費用はゼロ。1件の追加成約で、年間費用を回収できます。</p>
     <div class="pricing-grid">
       <div class="pricing-card reveal">
-        <div class="pricing-name">無料トライアル</div>
+        <div class="pricing-name">来店デモ</div>
         <div class="pricing-price">¥0</div>
-        <div class="pricing-period">14日間・カード不要</div>
+        <div class="pricing-period">施主への体験提供・当日限り</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li>AI画像生成 3回</li>
           <li>チャットヒアリング</li>
-          <li>候補メニュー表示</li>
+          <li>LINEで家族に共有</li>
           <li class="off">提案書PDF</li>
           <li class="off">履歴管理</li>
         </ul>
-        <a href="#cta"><button class="pricing-btn outline">無料で試す</button></a>
+        <a href="#cta"><button class="pricing-btn outline">デモを試す</button></a>
       </div>
       <div class="pricing-card featured reveal">
         <div class="pricing-badge">いちばん人気</div>
-        <div class="pricing-name">スタンダード</div>
-        <div class="pricing-price">¥3,000 <small>/月</small></div>
-        <div class="pricing-period">月30回の画像生成</div>
+        <div class="pricing-name">ライト</div>
+        <div class="pricing-price">¥5,000 <small>/月</small></div>
+        <div class="pricing-period">月20回の画像生成</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
-          <li>AI画像生成 30回/月</li>
+          <li>AI画像生成 20回/月</li>
           <li>提案書PDF自動生成</li>
           <li>ヒアリング履歴管理</li>
           <li>施工事例 登録・表示</li>
@@ -441,13 +544,13 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
         <a href="#cta"><button class="pricing-btn white">申し込む →</button></a>
       </div>
       <div class="pricing-card reveal">
-        <div class="pricing-name">プロ</div>
-        <div class="pricing-price">¥9,800 <small>/月</small></div>
-        <div class="pricing-period">画像生成 無制限</div>
+        <div class="pricing-name">スタンダード</div>
+        <div class="pricing-price">¥12,000 <small>/月</small></div>
+        <div class="pricing-period">月60回の画像生成</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
-          <li>AI画像生成 無制限</li>
-          <li>スタンダードの全機能</li>
+          <li>AI画像生成 60回/月</li>
+          <li>ライトの全機能</li>
           <li>複数スタッフアカウント</li>
           <li>概算シミュレーター</li>
           <li>素材情報カード</li>
@@ -455,6 +558,9 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
         </ul>
         <a href="#cta"><button class="pricing-btn outline">問い合わせる</button></a>
       </div>
+    </div>
+    <div class="pricing-note reveal">
+      複数店舗・チェーン展開の方は<a href="#cta" style="color:var(--gold);border-bottom:1px solid rgba(160,120,56,0.3);">エンタープライズプラン</a>をご相談ください。
     </div>
   </div>
 </section>
