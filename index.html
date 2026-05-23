@@ -671,9 +671,9 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 - 親しみやすい言葉を使う`;
 
 
-// ── PIN ──
+// ── PIN & Token Auth ──
 let pinValue = '';
-const CORRECT_PIN = '2759';
+let sessionToken = '';
 
 function pinKey(k) {
   if (pinValue.length >= 4) return;
@@ -695,13 +695,27 @@ function renderDots(error = false) {
   }
 }
 
-function checkPin() {
-  if (pinValue === CORRECT_PIN) {
-    document.getElementById('pinScreen').style.display = 'none';
-    const app = document.getElementById('app');
-    app.style.display = 'flex';
-    if (!chatStarted) initChat();
-  } else {
+async function checkPin() {
+  try {
+    const res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'verify_pin', pin: pinValue }),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      sessionToken = data.token;
+      pinValue = '';
+      renderDots();
+      document.getElementById('pinScreen').style.display = 'none';
+      const app = document.getElementById('app');
+      app.style.display = 'flex';
+      if (!chatStarted) initChat();
+    } else {
+      renderDots(true);
+      setTimeout(() => { pinValue = ''; renderDots(); }, 600);
+    }
+  } catch(e) {
     renderDots(true);
     setTimeout(() => { pinValue = ''; renderDots(); }, 600);
   }
@@ -709,6 +723,7 @@ function checkPin() {
 
 function lockApp() {
   pinValue = '';
+  sessionToken = '';
   renderDots();
   document.getElementById('pinScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
@@ -862,7 +877,7 @@ async function handlePhoto(event, prompt) {
 
   try {
     const form = new FormData();
-    form.append('pin', CORRECT_PIN);
+    form.append('token', sessionToken);
     form.append('prompt', prompt);
     form.append('image', file, file.name);
 
@@ -1120,7 +1135,7 @@ async function generateNight(btn, afterSrc, beforeSrc) {
     const nightPrompt = 'Same interior at night. Warm indoor lighting from lamps and ceiling lights, dark evening outside the windows, cozy ambiance. Keep all furniture, materials, colors, and layout exactly the same. Photorealistic.';
 
     const form = new FormData();
-    form.append('pin', CORRECT_PIN);
+    form.append('token', sessionToken);
     form.append('prompt', nightPrompt);
     form.append('image', file, 'after.png');
 
@@ -1212,7 +1227,7 @@ async function generatePDF(afterSrc, beforeSrc) {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pin: CORRECT_PIN, type: 'chat',
+        token: sessionToken, type: 'chat',
         system: `会話履歴からリフォームの要望を抽出し、以下のJSON形式のみで返してください。前後の説明は不要です。
 {
   "room": "部屋名",
@@ -1525,7 +1540,7 @@ async function fetchUsage() {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: CORRECT_PIN, type: 'get_usage' })
+      body: JSON.stringify({ token: sessionToken, type: 'get_usage' })
     });
     const data = await res.json();
     currentUsage = data;
@@ -1664,7 +1679,7 @@ async function submitCase() {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pin: CORRECT_PIN, type: 'save_case',
+        token: sessionToken, type: 'save_case',
         title, room, style, budget_range: budget,
         description: desc, image_data: caseImgData,
       })
@@ -1688,7 +1703,7 @@ async function renderCasesList() {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: CORRECT_PIN, type: 'get_cases', room:'', style:'' })
+      body: JSON.stringify({ token: sessionToken, type: 'get_cases', room:'', style:'' })
     });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
@@ -1720,7 +1735,7 @@ async function deleteCase(id) {
   await fetch(EDGE_URL, {
     method: 'POST',
     headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: CORRECT_PIN, type: 'delete_case', id })
+    body: JSON.stringify({ token: sessionToken, type: 'delete_case', id })
   });
   renderCasesList();
 }
@@ -1738,7 +1753,7 @@ async function showCases(room, style) {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: CORRECT_PIN, type: 'get_cases', room, style })
+      body: JSON.stringify({ token: sessionToken, type: 'get_cases', room, style })
     });
     const data = await res.json();
     document.getElementById('cases-loading')?.remove();
@@ -1782,7 +1797,7 @@ async function autoSaveSession(afterSrc) {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pin: CORRECT_PIN, type: 'chat',
+        token: sessionToken, type: 'chat',
         system: `会話履歴からリフォームの要望を抽出し、以下のJSON形式のみで返してください。
 {"room":"部屋名","parts":"変更箇所","style":"希望スタイル","budget":"予算","summary":"1〜2文の要約"}`,
         messages: [...history, { role:'user', content: '要望をJSONにまとめてください' }]
@@ -1802,7 +1817,7 @@ async function autoSaveSession(afterSrc) {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pin: CORRECT_PIN, type: 'save_session',
+        token: sessionToken, type: 'save_session',
         room: info.room || '—',
         parts: info.parts || '—',
         style: info.style || '—',
@@ -1825,7 +1840,7 @@ async function openHistoryPanel() {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: CORRECT_PIN, type: 'get_sessions' })
+      body: JSON.stringify({ token: sessionToken, type: 'get_sessions' })
     });
     const data = await res.json();
 
@@ -1964,7 +1979,7 @@ async function callAgent() {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type':'application/json' },
-      body: JSON.stringify({ pin: CORRECT_PIN, type:'chat', system: SYSTEM_PROMPT, messages: history }),
+      body: JSON.stringify({ token: sessionToken, type:'chat', system: SYSTEM_PROMPT, messages: history }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'APIエラー');
