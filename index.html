@@ -95,6 +95,18 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 .menu-item-arrow{color:var(--border2);}
 .menu-divider{height:1px;background:var(--border);margin:4px 0;}
 .menu-version{font-size:11px;color:var(--muted);text-align:center;padding:16px 20px 0;letter-spacing:0.06em;}
+/* SE toggle */
+.se-toggle-wrap{display:flex;align-items:center;gap:14px;padding:16px 20px;width:100%;box-sizing:border-box;}
+.se-toggle-icon{width:36px;height:36px;border-radius:9px;background:#f0f4fa;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.se-toggle-text{flex:1;}
+.se-toggle-label{font-size:14px;color:var(--text);}
+.se-toggle-desc{font-size:12px;color:var(--muted);margin-top:1px;}
+.se-switch{position:relative;width:42px;height:24px;flex-shrink:0;}
+.se-switch input{opacity:0;width:0;height:0;}
+.se-slider{position:absolute;inset:0;background:var(--border2);border-radius:24px;transition:background 0.2s;cursor:pointer;}
+.se-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+.se-switch input:checked + .se-slider{background:var(--gold);}
+.se-switch input:checked + .se-slider:before{transform:translateX(18px);}
 
 /* ── Chat ── */
 #chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;background:var(--bg);}
@@ -589,6 +601,20 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
         <div class="menu-item-desc">PIN画面に戻る</div>
       </div>
     </button>
+    <div class="menu-divider"></div>
+    <div class="se-toggle-wrap">
+      <div class="se-toggle-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a7ab5" stroke-width="1.8" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </div>
+      <div class="se-toggle-text">
+        <div class="se-toggle-label">SE音</div>
+        <div class="se-toggle-desc">タップ音・通知音のオン/オフ</div>
+      </div>
+      <label class="se-switch">
+        <input type="checkbox" id="seToggle" onchange="toggleSE(this.checked)">
+        <span class="se-slider"></span>
+      </label>
+    </div>
     <div class="menu-version">RENO.ai AI Agent</div>
     <div style="text-align:center;padding:6px 20px 0;">
       <a href="/lp.html" target="_blank" style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">サービス紹介ページ →</a>
@@ -803,6 +829,90 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 - 写真が送られるまでは部屋名やスタイルの質問をせず、写真を促し続ける`;
 
 
+// ── SE Sound Engine ──
+let seEnabled = localStorage.getItem('reno_se') !== 'off';
+let audioCtx = null;
+
+function initAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function toggleSE(on) {
+  seEnabled = on;
+  localStorage.setItem('reno_se', on ? 'on' : 'off');
+  if (on) { initAudioCtx(); playSound('chip'); }
+}
+
+function playSound(type) {
+  if (!seEnabled) return;
+  try {
+    initAudioCtx();
+    const ctx = audioCtx;
+    const now = ctx.currentTime;
+    const g = ctx.createGain();
+    g.connect(ctx.destination);
+
+    if (type === 'chip') {
+      // 軽いクリック：短いタップ音
+      const o = ctx.createOscillator();
+      o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(660, now + 0.06);
+      g.gain.setValueAtTime(0.18, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      o.connect(g); o.start(now); o.stop(now + 0.08);
+
+    } else if (type === 'send') {
+      // メッセージ送信：ポップ↑
+      const o = ctx.createOscillator();
+      o.type = 'sine'; o.frequency.setValueAtTime(600, now); o.frequency.exponentialRampToValueAtTime(900, now + 0.1);
+      g.gain.setValueAtTime(0.15, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      o.connect(g); o.start(now); o.stop(now + 0.12);
+
+    } else if (type === 'receive') {
+      // AI返答：やわらかいチャイム
+      [880, 1100].forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const gi = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        gi.gain.setValueAtTime(0, now + i * 0.08);
+        gi.gain.linearRampToValueAtTime(0.12, now + i * 0.08 + 0.02);
+        gi.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
+        o.connect(gi); gi.connect(ctx.destination);
+        o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.25);
+      });
+
+    } else if (type === 'complete') {
+      // 画像生成完了：達成チャイム3音
+      [660, 880, 1100].forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const gi = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        gi.gain.setValueAtTime(0, now + i * 0.1);
+        gi.gain.linearRampToValueAtTime(0.14, now + i * 0.1 + 0.02);
+        gi.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.3);
+        o.connect(gi); gi.connect(ctx.destination);
+        o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.3);
+      });
+
+    } else if (type === 'upload') {
+      // 写真アップ：カメラシャッター風
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const src = ctx.createBufferSource();
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2000;
+      src.buffer = buf; src.connect(f); f.connect(g);
+      g.gain.setValueAtTime(0.25, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      src.start(now);
+    }
+  } catch(e) {}
+}
+
+// SEトグルの初期状態を反映
+document.addEventListener('DOMContentLoaded', () => {
+  const tog = document.getElementById('seToggle');
+  if (tog) tog.checked = seEnabled;
+});
+
 // ── PIN & Token Auth ──
 let pinValue = '';
 let sessionToken = '';
@@ -934,8 +1044,8 @@ function renderSuggestions(chips) {
 }
 
 function tapChip(text) {
+  playSound('chip');
   if (text === '📷 写真を撮る・選ぶ') {
-    // 写真アップロードUIを直接開く
     showUploadCard('リフォームしたいお部屋の写真を選んでください');
     return;
   }
@@ -945,6 +1055,11 @@ function tapChip(text) {
 }
 
 function addAgentMessage(text, afterSrc = null, beforeSrc = null, suggestions = null) {
+  if (afterSrc && beforeSrc) {
+    playSound('complete');
+  } else {
+    playSound('receive');
+  }
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg agent';
@@ -1079,6 +1194,7 @@ async function handlePhoto(event, prompt) {
 
   const card = document.getElementById('upload-msg');
   if (card) card.remove();
+  playSound('upload');
   addUserMessage('📷 写真をアップロードしました');
   addTyping();
 
@@ -2292,6 +2408,7 @@ async function sendMessage() {
   if (!text || document.getElementById('sendBtn').disabled) return;
   input.value = ''; input.style.height = 'auto';
   removeSuggestions();
+  playSound('send');
   addUserMessage(text);
   history.push({ role:'user', content: text });
   await callAgent();
