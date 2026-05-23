@@ -146,6 +146,27 @@ h2 .num{font-family:'DM Sans',sans-serif;font-weight:400;font-size:0.9em;}
 .problem-title{font-size:14px;color:var(--text);font-weight:500;margin-bottom:6px;}
 .problem-desc{font-size:13px;color:var(--muted);line-height:1.65;}
 
+/* ── USAGE PATTERNS ── */
+#usage{background:var(--white);}
+.usage-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:40px;}
+.usage-card{border-radius:14px;overflow:hidden;border:1px solid var(--border);}
+.usage-card-head{padding:20px 20px 16px;}
+.usage-tag{display:inline-block;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;padding:3px 10px;border-radius:10px;margin-bottom:12px;}
+.usage-tag.staff{background:rgba(26,24,20,0.07);color:var(--text2);}
+.usage-tag.guest{background:rgba(160,120,56,0.1);color:var(--gold);}
+.usage-card-title{font-size:16px;color:var(--text);font-weight:500;margin-bottom:6px;line-height:1.3;}
+.usage-card-desc{font-size:13px;color:var(--muted);line-height:1.65;}
+.usage-card-body{padding:0 20px 20px;}
+.usage-steps-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.usage-steps-list li{font-size:12px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;line-height:1.5;}
+.usage-step-num{width:18px;height:18px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);margin-top:1px;}
+.usage-scene{height:80px;background:var(--bg2);margin-bottom:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:0 16px;}
+.usage-scene-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+@media(max-width:560px){
+  .usage-grid{grid-template-columns:1fr;}
+}
+
 /* ── HOW / QR Flow ── */
 .qr-flow{
   display:flex;align-items:flex-start;gap:0;
@@ -378,6 +399,69 @@ footer{padding:28px 24px;border-top:1px solid var(--border);display:flex;align-i
         <div class="problem-title">他社と差別化できない</div>
         <div class="problem-desc">価格や実績だけの競争になりがち。提案の質で選ばれる仕組みが必要。</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- USAGE PATTERNS -->
+<section id="usage">
+  <div class="container">
+    <span class="section-label reveal">2つの使い方</span>
+    <h2 class="reveal">商談スタイルに合わせて<br>使い分けられる</h2>
+    <div class="usage-grid">
+
+      <!-- パターン1：店内デモ -->
+      <div class="usage-card reveal">
+        <div class="usage-scene" style="background:var(--bg2);">
+          <div class="usage-scene-icon" style="background:var(--white);border:1px solid var(--border);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div style="font-size:18px;">+</div>
+          <div class="usage-scene-icon" style="background:var(--white);border:1px solid var(--border);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="1.6" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
+        <div class="usage-card-head">
+          <span class="usage-tag staff">パターン① 店内デモ</span>
+          <div class="usage-card-title">商談テーブルで<br>一緒に体験する</div>
+          <div class="usage-card-desc">スタッフがタブレットで操作して施主に見せる。その場でWOW体験を共有。</div>
+        </div>
+        <div class="usage-card-body">
+          <ul class="usage-steps-list">
+            <li><span class="usage-step-num">1</span>施主のお部屋の写真を撮影</li>
+            <li><span class="usage-step-num">2</span>チャットで要望をヒアリング</li>
+            <li><span class="usage-step-num">3</span>30秒でビフォーアフターを提示</li>
+            <li><span class="usage-step-num">4</span>その場で提案書PDFを作成・印刷</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- パターン2：施主セルフ -->
+      <div class="usage-card reveal">
+        <div class="usage-scene" style="background:var(--gold-bg);">
+          <div class="usage-scene-icon" style="background:var(--white);border:1px solid rgba(160,120,56,0.2);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+          </div>
+          <div style="font-size:18px;color:var(--gold);">→</div>
+          <div class="usage-scene-icon" style="background:var(--white);border:1px solid rgba(160,120,56,0.2);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+          </div>
+        </div>
+        <div class="usage-card-head">
+          <span class="usage-tag guest">パターン② 施主セルフ</span>
+          <div class="usage-card-title">QRで渡して<br>家で自由に体験</div>
+          <div class="usage-card-desc">施主専用PINをQRで渡すだけ。家族と一緒に試してもらい、意思決定を促す。</div>
+        </div>
+        <div class="usage-card-body">
+          <ul class="usage-steps-list">
+            <li><span class="usage-step-num">1</span>施主用PINを発行（有効期限・回数制限付き）</li>
+            <li><span class="usage-step-num">2</span>QRコードで施主のスマホに渡す</li>
+            <li><span class="usage-step-num">3</span>施主が自宅でゆっくり体験・家族と共有</li>
+            <li><span class="usage-step-num">4</span>「やっぱり進めたい」で来店・成約へ</li>
+          </ul>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
