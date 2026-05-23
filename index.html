@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RENO.ai</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:wght@400;600&display=swap');
 :root{
@@ -644,6 +645,54 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 </div>
 
 <!-- PDF overlay -->
+<!-- PDF Template (hidden) -->
+<div id="pdfTemplate" style="position:fixed;left:-9999px;top:0;width:794px;background:#0c0c0c;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif;color:#ede9e3;padding:0;margin:0;display:none;">
+  <div style="width:794px;min-height:1123px;background:#0c0c0c;position:relative;box-sizing:border-box;">
+    <div style="width:100%;height:4px;background:linear-gradient(90deg,#a07838,#c8a96e,#a07838);"></div>
+    <div style="padding:28px 52px 18px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #222;box-sizing:border-box;">
+      <div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:0.12em;color:#ede9e3;line-height:1;">RENO.ai</div>
+        <div style="font-size:9px;color:#7a6a50;letter-spacing:0.28em;text-transform:uppercase;margin-top:4px;">INTERIOR VISUALIZER</div>
+      </div>
+      <div style="text-align:right;">
+        <div id="pdf-date" style="font-size:11px;color:#686868;letter-spacing:0.08em;"></div>
+        <div style="font-size:9px;color:#444;letter-spacing:0.06em;margin-top:3px;">リフォーム提案書</div>
+      </div>
+    </div>
+    <div style="padding:22px 52px 0;box-sizing:border-box;">
+      <div style="font-size:18px;font-weight:700;color:#ede9e3;letter-spacing:0.08em;border-left:3px solid #a07838;padding-left:12px;">リフォーム提案書</div>
+    </div>
+    <div style="padding:16px 52px 0;box-sizing:border-box;">
+      <table id="pdf-info-table" style="width:100%;border-collapse:collapse;font-size:12px;"></table>
+    </div>
+    <div id="pdf-summary-block" style="padding:14px 52px 0;display:none;box-sizing:border-box;">
+      <div style="font-size:9px;color:#686868;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:6px;">ご要望メモ</div>
+      <div id="pdf-summary-text" style="font-size:12px;color:#b0aba8;line-height:1.75;background:#161616;border-radius:6px;padding:12px 16px;border-left:2px solid #a07838;"></div>
+    </div>
+    <div style="padding:20px 52px 0;box-sizing:border-box;">
+      <div style="font-size:9px;color:#7a6a50;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:10px;">BEFORE / AFTER</div>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-size:8px;color:#b09060;letter-spacing:0.18em;margin-bottom:5px;">BEFORE</div>
+          <img id="pdf-before-img" style="width:100%;height:200px;object-fit:cover;border-radius:4px;display:block;" />
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:8px;color:#7ab87a;letter-spacing:0.18em;margin-bottom:5px;">AFTER</div>
+          <img id="pdf-after-img" style="width:100%;height:200px;object-fit:cover;border-radius:4px;display:block;" />
+        </div>
+      </div>
+    </div>
+    <div id="pdf-notes-block" style="padding:14px 52px 60px;display:none;box-sizing:border-box;">
+      <div style="font-size:9px;color:#686868;letter-spacing:0.16em;text-transform:uppercase;margin-bottom:6px;">備考</div>
+      <div id="pdf-notes-text" style="font-size:12px;color:#968f88;line-height:1.75;"></div>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 52px;background:#141414;border-top:1px solid #222;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;">
+      <div style="font-size:8px;color:#505050;letter-spacing:0.04em;line-height:1.6;">本提案書はRENO.ai AIエージェントが生成したイメージです。実際の施工内容・費用は担当者にご確認ください。</div>
+      <div style="font-size:10px;color:#5a5040;letter-spacing:0.14em;font-weight:600;">RENO.ai</div>
+    </div>
+  </div>
+</div>
+
 <div id="pdfOverlay">
   <div class="spinner"></div>
   <p>提案書を作成中...</p>
@@ -1403,56 +1452,13 @@ async function generatePDF(afterSrc, beforeSrc) {
       info = match ? JSON.parse(match[0]) : {};
     } catch(e) { info = {}; }
 
-    // 2. Load images as base64
-    const toBase64 = async (src) => {
-      if (src.startsWith('data:')) return src;
-      const res = await fetch(src);
-      const blob = await res.blob();
-      return new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(blob); });
-    };
-    const [afterB64, beforeB64] = await Promise.all([toBase64(afterSrc), toBase64(beforeSrc)]);
-
-    // 3. Build PDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297;
-    const pad = 18;
-
-    // Background
-    doc.setFillColor(12, 12, 12);
-    doc.rect(0, 0, W, H, 'F');
-
-    // Gold accent bar
-    doc.setFillColor(200, 169, 110);
-    doc.rect(0, 0, W, 1.5, 'F');
-
-    // Logo
-    doc.setTextColor(237, 233, 227);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('RENO.ai', pad, 22);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(122, 106, 80);
-    doc.text('INTERIOR VISUALIZER', pad + 42, 19);
+    // 2. Fill PDF template
+    const tmpl = document.getElementById('pdfTemplate');
+    tmpl.style.display = 'block';
 
     // Date
-    const today = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(today, W - pad, 22, { align: 'right' });
-
-    // Divider
-    doc.setDrawColor(40, 40, 40);
-    doc.setLineWidth(0.3);
-    doc.line(pad, 27, W - pad, 27);
-
-    // Title
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(237, 233, 227);
-    doc.text('リフォーム提案書', pad, 38);
+    document.getElementById('pdf-date').textContent =
+      new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
 
     // Info table
     const fields = [
@@ -1461,79 +1467,74 @@ async function generatePDF(afterSrc, beforeSrc) {
       ['ご希望スタイル', info.style || '—'],
       ['ご予算',     info.budget || '—'],
     ];
-    let y = 48;
-    fields.forEach(([label, val]) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(label, pad, y);
-      doc.setFontSize(10);
-      doc.setTextColor(200, 169, 110);
-      doc.text(val, pad + 38, y);
-      doc.setDrawColor(30, 30, 30);
-      doc.setLineWidth(0.2);
-      doc.line(pad, y + 3, W - pad, y + 3);
-      y += 11;
-    });
+    const table = document.getElementById('pdf-info-table');
+    table.innerHTML = fields.map(([label, val]) => `
+      <tr style="border-bottom:1px solid #1e1e1e;">
+        <td style="padding:9px 0;color:#686868;font-size:10px;letter-spacing:0.1em;width:120px;">${label}</td>
+        <td style="padding:9px 0;color:#c8a96e;font-size:12px;font-weight:500;">${val}</td>
+      </tr>`).join('');
 
     // Summary
     if (info.summary) {
-      y += 2;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('ご要望メモ', pad, y);
-      y += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(180, 175, 168);
-      const lines = doc.splitTextToSize(info.summary, W - pad * 2);
-      doc.text(lines, pad, y);
-      y += lines.length * 5 + 4;
+      document.getElementById('pdf-summary-text').textContent = info.summary;
+      document.getElementById('pdf-summary-block').style.display = 'block';
+    } else {
+      document.getElementById('pdf-summary-block').style.display = 'none';
     }
 
     // Images
-    y += 4;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(122, 106, 80);
-    doc.text('BEFORE / AFTER', pad, y);
-    y += 5;
-
-    const imgW = (W - pad * 2 - 6) / 2;
-    const imgH = imgW * 0.7;
-
-    // Labels
-    doc.setFontSize(7);
-    doc.setTextColor(176, 144, 96);
-    doc.text('BEFORE', pad, y + 4);
-    doc.setTextColor(122, 184, 122);
-    doc.text('AFTER', pad + imgW + 6, y + 4);
-    y += 6;
-
-    try { doc.addImage(beforeB64, 'JPEG', pad, y, imgW, imgH, '', 'MEDIUM'); } catch(e) {}
-    try { doc.addImage(afterB64, 'JPEG', pad + imgW + 6, y, imgW, imgH, '', 'MEDIUM'); } catch(e) {}
-    y += imgH + 10;
+    const toBase64 = async (src) => {
+      if (src.startsWith('data:')) return src;
+      const res = await fetch(src);
+      const blob = await res.blob();
+      return new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(blob); });
+    };
+    const [afterB64, beforeB64] = await Promise.all([toBase64(afterSrc), toBase64(beforeSrc)]);
+    document.getElementById('pdf-before-img').src = beforeB64;
+    document.getElementById('pdf-after-img').src = afterB64;
 
     // Notes
     if (info.notes) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('備考', pad, y);
-      y += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(150, 145, 138);
-      const nlines = doc.splitTextToSize(info.notes, W - pad * 2);
-      doc.text(nlines, pad, y);
+      document.getElementById('pdf-notes-text').textContent = info.notes;
+      document.getElementById('pdf-notes-block').style.display = 'block';
+    } else {
+      document.getElementById('pdf-notes-block').style.display = 'none';
     }
 
-    // Footer
-    doc.setFillColor(20, 20, 20);
-    doc.rect(0, H - 14, W, 14, 'F');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(80, 80, 80);
-    doc.text('本提案書はRENO.ai AIエージェントが生成したイメージです。実際の施工内容・費用は担当者にご確認ください。', pad, H - 6);
+    // 3. Wait for images to load
+    await new Promise(r => setTimeout(r, 600));
+
+    // 4. html2canvas → jsPDF
+    const canvas = await html2canvas(tmpl.firstElementChild, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#0c0c0c',
+      width: 794,
+      windowWidth: 794
+    });
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const canvasH = (canvas.height / canvas.width) * W;
+    if (canvasH <= H) {
+      doc.addImage(imgData, 'JPEG', 0, 0, W, canvasH);
+    } else {
+      // Multi-page
+      let srcY = 0;
+      const pageH = (H / W) * canvas.width;
+      while (srcY < canvas.height) {
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(pageH, canvas.height - srcY);
+        pageCanvas.getContext('2d').drawImage(canvas, 0, -srcY);
+        doc.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H);
+        srcY += pageH;
+        if (srcY < canvas.height) doc.addPage();
+      }
+    }
 
     doc.save(`RENO-ai-提案書-${Date.now()}.pdf`);
 
@@ -1541,6 +1542,8 @@ async function generatePDF(afterSrc, beforeSrc) {
     alert('PDF生成に失敗しました: ' + e.message);
   } finally {
     overlay.style.display = 'none';
+    const tmpl = document.getElementById('pdfTemplate');
+    if (tmpl) tmpl.style.display = 'none';
   }
 }
 
