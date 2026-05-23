@@ -97,6 +97,22 @@ body{background:#0c0c0c;font-family:'DM Sans','Hiragino Sans',sans-serif;color:#
 .typing span:nth-child(3){animation-delay:0.4s;}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
 
+/* ── Suggestion chips ── */
+.suggestions{
+  display:flex;flex-wrap:wrap;gap:7px;
+  padding:4px 0 2px 38px;
+  animation:fadeIn 0.3s ease;
+}
+.chip{
+  background:#141414;border:1px solid #2a2520;
+  border-radius:20px;padding:7px 14px;
+  font-size:12.5px;color:#c8a96e;cursor:pointer;
+  font-family:inherit;letter-spacing:0.02em;
+  transition:all 0.15s;white-space:nowrap;
+}
+.chip:hover{background:#1f1c17;border-color:#6a5030;color:#e0c080;}
+.chip:active{transform:scale(0.97);}
+
 /* ── Input bar ── */
 #inputbar{padding:12px 16px;border-top:1px solid #161616;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
 #userInput{
@@ -187,22 +203,32 @@ const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタン
 ## 会話の流れ
 1. 温かく挨拶し、どの部屋・スペースをリフォームしたいか聞く
 2. 現状の状態と変えたい箇所を具体的に聞く（床・壁・キッチンなど）
-3. 好みのスタイル（モダン・ナチュラル・和風・インダストリアルなど）を聞く
-4. 十分な情報が集まったら「では実際のお部屋の写真で施工後イメージを生成しましょう！」と提案し、以下を出力する：
+3. 好みのスタイルを聞く（モダン・ナチュラル・和風・インダストリアルなど）
+4. 予算感を軽く聞く
+5. 十分な情報が集まったら画像生成を提案し、以下を出力する：
    [GENERATE_IMAGE: {英語の画像生成プロンプト}]
 
-## プロンプトのルール
+## タグのルール
+- 毎回の返答の末尾に必ず [SUGGESTIONS: 選択肢1, 選択肢2, 選択肢3] を付ける
+- 選択肢は文脈に合った3〜5個の短い日本語
+- 例（部屋を聞く場面）: [SUGGESTIONS: リビング, キッチン, 浴室・洗面所, 寝室, 玄関]
+- 例（スタイルを聞く場面）: [SUGGESTIONS: モダン, ナチュラル, 和風, インダストリアル, 北欧風]
+- 例（箇所を聞く場面）: [SUGGESTIONS: 床材, 壁紙, キッチン設備, 照明, 収納]
+- 例（予算を聞く場面）: [SUGGESTIONS: 50万円以下, 50〜100万円, 100〜200万円, 200万円以上]
+- 例（画像生成後）: [SUGGESTIONS: 別の箇所も試す, スタイルを変えてみる, これで進めたい, 提案書を作成]
+- [GENERATE_IMAGE:...] がある場合は [SUGGESTIONS:...] は不要
+
+## 画像プロンプトのルール
 - 英語で記述する
 - 変更箇所を明確に、それ以外は "Keep everything else exactly the same. Photorealistic interior design." で締める
-- 例: "Change the floor to light oak hardwood planks. Keep all furniture, walls, and ceiling exactly the same. Photorealistic interior design."
 
 ## 重要なルール
 - 常に日本語で返答する
-- 返答は短く（3〜5文程度）
+- 返答は短く（2〜4文程度）
 - 一度に聞く質問は1つまで
-- [GENERATE_IMAGE:...] は必ず単体で1行に出力する
-- 画像生成後は結果についてコメントし、別の箇所も試すか聞く
+- タグは必ず末尾に、本文とは改行で区切る
 - 親しみやすく、専門的すぎない言葉を使う`;
+
 
 // ── PIN ──
 let pinValue = '';
@@ -253,7 +279,11 @@ let chatStarted = false;
 
 function initChat() {
   chatStarted = true;
-  addAgentMessage('こんにちは！RENO.aiへようこそ🏠\nどのお部屋をリフォームしたいとお考えですか？（例：リビング、キッチン、洗面所など）');
+  addAgentMessage(
+    'こんにちは！RENO.aiへようこそ。\nどのお部屋をリフォームしたいとお考えですか？',
+    null, null,
+    ['リビング', 'キッチン', '浴室・洗面所', '寝室', '玄関']
+  );
 }
 
 function autoResize(el) {
@@ -269,7 +299,38 @@ function scrollBottom() {
 const agentIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
 const userIcon  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 
-function addAgentMessage(text, afterSrc = null, beforeSrc = null) {
+function removeSuggestions() {
+  const el = document.getElementById('suggestions-row');
+  if (el) el.remove();
+}
+
+function renderSuggestions(chips) {
+  removeSuggestions();
+  if (!chips || chips.length === 0) return;
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'suggestions'; div.id = 'suggestions-row';
+  chips.forEach(label => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = label;
+    btn.onclick = () => {
+      removeSuggestions();
+      tapChip(label);
+    };
+    div.appendChild(btn);
+  });
+  chat.appendChild(div);
+  scrollBottom();
+}
+
+function tapChip(text) {
+  addUserMessage(text);
+  history.push({ role:'user', content: text });
+  callAgent();
+}
+
+function addAgentMessage(text, afterSrc = null, beforeSrc = null, suggestions = null) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg agent';
@@ -284,6 +345,7 @@ function addAgentMessage(text, afterSrc = null, beforeSrc = null) {
   inner += '</div>';
   div.innerHTML = inner;
   chat.appendChild(div);
+  if (suggestions) renderSuggestions(suggestions);
   scrollBottom();
 }
 
@@ -352,7 +414,11 @@ async function handlePhoto(event, prompt) {
     if (!src) throw new Error('画像の取得に失敗しました');
 
     removeTyping();
-    addAgentMessage('施工後のイメージが完成しました！いかがでしょうか？✨\n他の箇所や別のスタイルも試してみますか？', src, beforeURL);
+    addAgentMessage(
+      '施工後のイメージが完成しました！いかがでしょうか？✨',
+      src, beforeURL,
+      ['別の箇所も試す', 'スタイルを変えてみる', 'もう一度生成する', 'これで進めたい']
+    );
     history.push({ role:'assistant', content:'施工後のイメージが完成しました。いかがでしょうか？他の箇所も試してみますか？' });
 
   } catch(e) {
@@ -365,13 +431,17 @@ async function sendMessage() {
   const input = document.getElementById('userInput');
   const text  = input.value.trim();
   if (!text || document.getElementById('sendBtn').disabled) return;
-
   input.value = ''; input.style.height = 'auto';
+  removeSuggestions();
   addUserMessage(text);
   history.push({ role:'user', content: text });
+  await callAgent();
+  document.getElementById('userInput').focus();
+}
+
+async function callAgent() {
   document.getElementById('sendBtn').disabled = true;
   addTyping();
-
   try {
     const res  = await fetch(EDGE_URL, {
       method: 'POST',
@@ -384,15 +454,25 @@ async function sendMessage() {
     const raw = data.content?.[0]?.text || '';
     removeTyping();
 
-    const match = raw.match(/\[GENERATE_IMAGE:\s*([\s\S]+?)\]/);
-    if (match) {
-      const prompt = match[1].trim();
-      const display = raw.replace(/\[GENERATE_IMAGE:[\s\S]+?\]/, '').trim();
+    // Parse tags
+    const genMatch  = raw.match(/\[GENERATE_IMAGE:\s*([\s\S]+?)\]/);
+    const sugMatch  = raw.match(/\[SUGGESTIONS:\s*(.+?)\]/);
+    const suggestions = sugMatch
+      ? sugMatch[1].split(',').map(s => s.trim()).filter(Boolean)
+      : null;
+
+    // Clean display text
+    let display = raw
+      .replace(/\[GENERATE_IMAGE:[\s\S]+?\]/, '')
+      .replace(/\[SUGGESTIONS:.+?\]/, '')
+      .trim();
+
+    if (genMatch) {
       if (display) addAgentMessage(display);
       history.push({ role:'assistant', content: raw });
-      showUploadCard(prompt);
+      showUploadCard(genMatch[1].trim());
     } else {
-      addAgentMessage(raw);
+      addAgentMessage(display, null, null, suggestions);
       history.push({ role:'assistant', content: raw });
     }
 
@@ -400,9 +480,7 @@ async function sendMessage() {
     removeTyping();
     addAgentMessage(`エラーが発生しました: ${e.message}`);
   }
-
   document.getElementById('sendBtn').disabled = false;
-  document.getElementById('userInput').focus();
 }
 
 </script>
