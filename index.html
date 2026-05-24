@@ -1541,7 +1541,7 @@ async function useSampleImage(idx, prompt) {
   } catch(e) {
     removeTyping();
     try {
-      const res = await fetch('/samples/after.jpg');
+      const res = await fetch('/samples/after_living.jpg');
       const blob = await res.blob();
       const fallbackSrc = URL.createObjectURL(blob);
       addAgentMessage(
@@ -1676,16 +1676,17 @@ async function generateWithFiles(beforeFile, idealFile) {
   }
 }
 
-// エラー時フォールバック画像取得
+// エラー時フォールバック画像取得（after_プレフィックスのアフター専用画像）
 async function getFallbackImage(prompt) {
   try {
     const p = (prompt || '').toLowerCase();
-    let file = 'after.jpg'; // デフォルト：リビング
-    if (p.includes('kitchen') || p.includes('キッチン'))            file = 'kitchen.jpg';
-    else if (p.includes('bathroom') || p.includes('浴室'))          file = 'bathroom.jpg';
-    else if (p.includes('washroom') || p.includes('洗面') || p.includes('脱衣')) file = 'washroom.jpg';
-    else if (p.includes('bedroom') || p.includes('寝室') || p.includes('子供')) file = 'bedroom.jpg';
-    else if (p.includes('washitsu') || p.includes('和室'))          file = 'washitsu.jpg';
+    let file = 'after_living.jpg';
+    if (p.includes('kitchen') || p.includes('キッチン'))                      file = 'after_kitchen.jpg';
+    else if (p.includes('bathroom') || p.includes('浴室'))                    file = 'after_bathroom.jpg';
+    else if (p.includes('washroom') || p.includes('洗面') || p.includes('脱衣')) file = 'after_washroom.jpg';
+    else if (p.includes('bedroom') || p.includes('寝室') || p.includes('子供')) file = 'after_bedroom.jpg';
+    else if (p.includes('washitsu') || p.includes('和室'))                    file = 'after_washitsu.jpg';
+    else if (p.includes('entrance') || p.includes('玄関'))                    file = 'after_entrance.jpg';
     const res = await fetch(`/samples/${file}`);
     const blob = await res.blob();
     return URL.createObjectURL(blob);
@@ -2327,6 +2328,7 @@ const SAMPLE_IMAGES = [
   { label: 'キッチン',  src: '/samples/kitchen.jpg' },
   { label: '洗面所',    src: '/samples/washroom.jpg' },
   { label: '浴室',      src: '/samples/bathroom.jpg' },
+  { label: '玄関',      src: '/samples/entrance.jpg' },
 ];
 
 // ── Guest PIN Panel ──
