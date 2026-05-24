@@ -1343,7 +1343,7 @@ async function useSampleImage(idx, prompt) {
     form.append('image', file, file.name);
     const apiRes = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
     const data = await apiRes.json();
-    if (apiRes.status === 429 && data.error === 'limit_exceeded') {
+    if (apiRes.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
       removeTyping(); showUpgradeModal();
       addAgentMessage('今月の生成回数に達しました。プランのアップグレードをご検討ください。');
       return;
@@ -1385,7 +1385,7 @@ async function handlePhoto(event, prompt) {
     const data = await res.json();
 
     // 回数制限エラー
-    if (res.status === 429 && data.error === 'limit_exceeded') {
+    if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
       removeTyping();
       showUpgradeModal();
       addAgentMessage('今月の生成回数に達しました。プランのアップグレードをご検討ください。');
@@ -1995,7 +1995,8 @@ function simConfirm() {
 }
 
 // ── Usage ──
-let currentUsage = { plan:'free', count:0, limit:3, remaining:3 };
+let currentUsage = { plan:'free', count:0, limit:100, remaining:100 };
+const DEMO_BYPASS_LIMIT = true; // プレゼン用：回数制限を無効化
 
 async function fetchUsage() {
   try {
