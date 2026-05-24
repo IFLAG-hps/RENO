@@ -1345,6 +1345,7 @@ function getIconForEmotion(emotion) {
 
 function getAgentIconHTML(iconId) {
   const id = iconId || _currentIconId;
+  if (id === 'none') return null;
   const ic = AGENT_ICONS.find(i => i.id === id);
   if (!ic || ic.type !== 'img') {
     return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
@@ -1410,7 +1411,11 @@ function addAgentMessage(text, afterSrc = null, beforeSrc = null, suggestions = 
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg agent';
-  let inner = `<div class="avatar agent">${getAgentIconHTML()}</div><div class="bubble agent">`;
+  const iconHTML = getAgentIconHTML();
+  const avatarHTML = iconHTML
+    ? `<div class="avatar agent">${iconHTML}</div>`
+    : `<div class="avatar agent" style="visibility:hidden;flex-shrink:0;"></div>`;
+  let inner = `${avatarHTML}<div class="bubble agent">`;
   inner += text.replace(/\n/g, '<br>');
   if (afterSrc && beforeSrc) {
     inner += `<div class="compare-pair">
@@ -1457,11 +1462,15 @@ function addUserMessage(text) {
 }
 
 function addTyping() {
-  _currentIconId = getIconForEmotion('thinking'); // 考え中は横顔
+  _currentIconId = getIconForEmotion('thinking');
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg agent'; div.id = 'typing';
-  div.innerHTML = `<div class="avatar agent">${getAgentIconHTML()}</div><div class="bubble agent"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  const iconHTML = getAgentIconHTML();
+  const avatarHTML = iconHTML
+    ? `<div class="avatar agent">${iconHTML}</div>`
+    : `<div class="avatar agent" style="visibility:hidden;flex-shrink:0;"></div>`;
+  div.innerHTML = `${avatarHTML}<div class="bubble agent"><div class="typing"><span></span><span></span><span></span></div></div>`;
   chat.appendChild(div);
   scrollBottom();
 }
