@@ -84,7 +84,9 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
   box-shadow:0 -8px 40px rgba(0,0,0,0.1);
 }
 .menu-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 16px;}
-.menu-title{font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;padding:0 20px 10px;border-bottom:1px solid var(--border);}
+.menu-title{font-size:11px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;padding:0 20px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.menu-close-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);transition:all 0.15s;flex-shrink:0;}
+.menu-close-btn:hover{background:var(--bg2);color:var(--text);}
 .menu-item{
   display:flex;align-items:center;gap:14px;
   padding:16px 20px;cursor:pointer;transition:background 0.12s;
@@ -613,7 +615,12 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 <div id="menuSheet" onclick="closeMenuOuter(event)">
   <div class="menu-drawer">
     <div class="menu-handle"></div>
-    <div class="menu-title">メニュー</div>
+    <div class="menu-title">
+      <span>メニュー</span>
+      <button class="menu-close-btn" onclick="closeMenuSheet()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
     <button class="menu-item" onclick="openGuestPinPanel();closeMenuSheet();">
       <div class="menu-item-icon" style="background:#f0faf2;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a9a5a" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
