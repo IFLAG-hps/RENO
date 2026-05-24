@@ -1530,18 +1530,78 @@ async function handlePhoto(event, prompt) {
   if (card) card.remove();
   playSound('upload');
   addUserMessage('📷 写真をアップロードしました');
+
+  // 理想イメージ追加カードを表示
+  showIdealImageCard(file, beforeURL, prompt);
+}
+
+function showIdealImageCard(beforeFile, beforeURL, prompt) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg agent'; div.id = 'ideal-msg';
+  div.innerHTML = `
+    <div class="avatar agent">${getAgentIconHTML()}</div>
+    <div class="bubble agent">
+      <div style="font-size:13px;margin-bottom:10px;">理想のイメージ画像はありますか？<br><span style="font-size:11px;color:var(--muted);">カタログや参考写真があれば、より近いイメージで生成できます。</span></div>
+      <div style="display:flex;gap:8px;">
+        <div class="upload-card" style="flex:1;" onclick="document.getElementById('idealInput').click()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div class="upload-card-text">理想の画像を追加</div>
+        </div>
+        <div class="upload-card" style="flex:1;border-color:var(--border);" onclick="generateWithFiles(null, null)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <div class="upload-card-text" style="color:var(--muted);">なしで生成する</div>
+        </div>
+      </div>
+      <input type="file" id="idealInput" accept="image/*" style="display:none" onchange="handleIdealPhoto(event)">
+    </div>`;
+  chat.appendChild(div);
+  scrollBottom();
+
+  // グローバルに保持
+  window._beforeFile = beforeFile;
+  window._beforeURL = beforeURL;
+  window._genPrompt = prompt;
+}
+
+async function handleIdealPhoto(event) {
+  const idealFile = event.target.files[0];
+  if (!idealFile) return;
+  const card = document.getElementById('ideal-msg');
+  if (card) card.remove();
+  playSound('upload');
+  addUserMessage('🖼️ 理想のイメージ画像を追加しました');
+  await generateWithFiles(window._beforeFile, idealFile);
+}
+
+async function generateWithFiles(beforeFile, idealFile) {
+  const card = document.getElementById('ideal-msg');
+  if (card) card.remove();
+
+  const bf = beforeFile || window._beforeFile;
+  const prompt = window._genPrompt || '';
+  const beforeURL = window._beforeURL || '';
+
   addTyping();
 
   try {
     const form = new FormData();
     form.append('token', sessionToken);
-    form.append('prompt', prompt);
-    form.append('image', file, file.name);
+
+    // 理想画像がある場合はプロンプトに指示を追加
+    if (idealFile) {
+      const enhancedPrompt = prompt + ' Apply the interior style, materials, colors, and design aesthetic from the reference style image to this room. Keep the room structure and layout exactly the same. Photorealistic interior design.';
+      form.append('prompt', enhancedPrompt);
+      form.append('image[]', bf, bf.name);
+      form.append('image[]', idealFile, idealFile.name);
+    } else {
+      form.append('prompt', prompt);
+      form.append('image', bf, bf.name);
+    }
 
     const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
     const data = await res.json();
 
-    // 回数制限エラー
     if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
       removeTyping();
       showUpgradeModal();
@@ -1549,23 +1609,23 @@ async function handlePhoto(event, prompt) {
       return;
     }
 
-    if (!res.ok) throw new Error(data.error?.message || '生成に失敗しました');
+    if (!res.ok) throw new Error(data.error?.message || data.error || '生成に失敗しました');
 
     const img = data.data?.[0];
     const src = img?.url || (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
     if (!src) throw new Error('画像の取得に失敗しました');
 
-    // 使用回数を更新
     if (data._usage) updateUsageAfterGen(data._usage);
 
     removeTyping();
-    addAgentMessage(
-      '施工後のイメージが完成しました！いかがでしょうか？✨',
-      src, beforeURL,
+    const msg = idealFile
+      ? '理想のイメージを参考にした施工後のイメージが完成しました！✨'
+      : '施工後のイメージが完成しました！いかがでしょうか？✨';
+    addAgentMessage(msg, src, beforeURL,
       ['別の箇所も試す', 'スタイルを変えてみる', '昼/夜を見る', '概算を見る', '提案書を作成']
     );
-    history.push({ role:'assistant', content:'施工後のイメージが完成しました。いかがでしょうか？他の箇所も試してみますか？' });
-    autoSaveSession(src); // バックグラウンドで保存
+    history.push({ role:'assistant', content: msg });
+    autoSaveSession(src);
 
   } catch(e) {
     removeTyping();
