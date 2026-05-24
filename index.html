@@ -791,12 +791,11 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
       4.「<b>インストール</b>」をタップで完了
     </div>
     <div class="qr-footer">
-      <button class="qr-btn-ghost" onclick="window.open('/lp.html','_blank')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        サービスサイト
-      </button>
       <button class="qr-btn-copy" onclick="copyQrUrl()">URLをコピー</button>
       <button class="qr-btn-close" onclick="closeQrModal()">閉じる</button>
+    </div>
+    <div style="text-align:center;padding:10px 0 0;">
+      <a href="/lp.html" target="_blank" onclick="closeQrModal()" style="font-size:11px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;letter-spacing:0.04em;">サービスサイトを見る →</a>
     </div>
   </div>
 </div>
