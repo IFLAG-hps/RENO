@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RENO.ai</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#a07838">
@@ -59,7 +59,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 .pin-key.empty{pointer-events:none;background:transparent;border-color:transparent;box-shadow:none;}
 
 /* ── Header ── */
-#header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white);}
+#header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;padding-top:max(12px, env(safe-area-inset-top));border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white);}
 .h-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.12em;color:var(--text);}
 .h-badge{font-size:9px;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;border:1px solid rgba(160,120,56,0.3);padding:2px 6px;border-radius:3px;margin-left:8px;vertical-align:middle;}
 .h-right{display:flex;align-items:center;gap:10px;}
