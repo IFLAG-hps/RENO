@@ -1679,7 +1679,14 @@ async function generateWithFiles(beforeFile, idealFile) {
 // エラー時フォールバック画像取得
 async function getFallbackImage(prompt) {
   try {
-    const res = await fetch('/samples/after.jpg');
+    const p = (prompt || '').toLowerCase();
+    let file = 'after.jpg'; // デフォルト：リビング
+    if (p.includes('kitchen') || p.includes('キッチン'))            file = 'kitchen.jpg';
+    else if (p.includes('bathroom') || p.includes('浴室'))          file = 'bathroom.jpg';
+    else if (p.includes('washroom') || p.includes('洗面') || p.includes('脱衣')) file = 'washroom.jpg';
+    else if (p.includes('bedroom') || p.includes('寝室') || p.includes('子供')) file = 'bedroom.jpg';
+    else if (p.includes('washitsu') || p.includes('和室'))          file = 'washitsu.jpg';
+    const res = await fetch(`/samples/${file}`);
     const blob = await res.blob();
     return URL.createObjectURL(blob);
   } catch(e) { return null; }
