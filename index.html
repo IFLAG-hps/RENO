@@ -1517,11 +1517,16 @@ async function useSampleImage(idx, prompt) {
     autoSaveSession(src);
   } catch(e) {
     removeTyping();
-    addAgentMessage('現在AIイメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
+    // フォールバック：別のサンプル画像をアフターとして表示
+    const fallbackIdx = (idx + 1) % SAMPLE_IMAGES.length;
+    const fallbackSrc = SAMPLE_IMAGES[fallbackIdx].src;
+    addAgentMessage(
+      '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。',
+      fallbackSrc, beforeURL,
+      ['別の箇所も試す', 'スタイルを変えてみる', '昼/夜を見る', '概算を見る', '提案書を作成']
+    );
   }
 }
-
-async function handlePhoto(event, prompt) {
   const file = event.target.files[0];
   if (!file) return;
   const beforeURL = URL.createObjectURL(file);
