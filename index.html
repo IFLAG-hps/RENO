@@ -37,7 +37,8 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
   position:fixed;inset:0;
   background:linear-gradient(160deg,var(--white) 0%,var(--gold-bg) 100%);
   display:flex;align-items:center;justify-content:center;
-  z-index:100;padding:24px;
+  z-index:600;padding:24px;
+  padding-top:max(24px, env(safe-area-inset-top));
 }
 .pin-card{width:100%;max-width:320px;text-align:center;}
 .pin-logo{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;letter-spacing:0.14em;margin-bottom:4px;color:var(--text);}
