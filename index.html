@@ -681,14 +681,18 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
       <div class="char-selector" id="charSelector"></div>
     </div>
     <div class="menu-version">RENO AI Agent</div>
-    <div style="text-align:center;padding:6px 20px 0;">
-      <a href="/lp.html" target="_blank" style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">サービス紹介ページ →</a>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 20px 4px;">
+      <a href="/lp.html" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--muted);letter-spacing:0.04em;text-decoration:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 6px;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold-light)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10z"/></svg>
+        サービス紹介
+      </a>
+      <a href="/agent.html" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--muted);letter-spacing:0.04em;text-decoration:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 6px;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold-light)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        AIエージェント
+      </a>
     </div>
-    <div style="text-align:center;padding:6px 20px 8px;">
-      <a href="/agent.html" target="_blank" style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">AIエージェント紹介 →</a>
-    </div>
-    <div id="openBrowserWrap" style="text-align:center;padding:8px 20px 4px;display:none;">
-      <button onclick="copyUrlAndNotify()" style="font-size:11px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 14px;cursor:pointer;letter-spacing:0.04em;font-family:inherit;display:inline-flex;align-items:center;gap:5px;">
+    <div id="openBrowserWrap" style="text-align:center;padding:6px 20px 4px;display:none;">
+      <button onclick="copyUrlAndNotify()" style="width:100%;font-size:11px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;letter-spacing:0.04em;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         ブラウザで開く
       </button>
