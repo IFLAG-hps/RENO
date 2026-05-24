@@ -117,14 +117,20 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 .avatar.agent{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);color:var(--gold);}
 .avatar.agent img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
 /* Icon picker */
-.icon-picker-wrap{padding:16px 20px;}
-.icon-picker-label{font-size:10px;color:var(--muted);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;}
-.icon-picker-grid{display:flex;gap:8px;flex-wrap:wrap;}
-.icon-picker-item{width:40px;height:40px;border-radius:50%;cursor:pointer;border:2px solid transparent;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg2);transition:border-color 0.15s,transform 0.15s;}
-.icon-picker-item:hover{transform:scale(1.08);}
-.icon-picker-item.selected{border-color:var(--gold);}
-.icon-picker-item img{width:100%;height:100%;object-fit:cover;}
-.icon-picker-item.none-icon{font-size:16px;}
+.icon-picker-wrap{padding:14px 20px 18px;}
+.icon-picker-label{font-size:10px;color:var(--muted);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:12px;}
+/* キャラ選択カード */
+.char-selector{display:flex;gap:8px;}
+.char-card{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:12px 8px 10px;cursor:pointer;background:var(--bg);text-align:center;transition:all 0.15s;position:relative;}
+.char-card:hover{border-color:var(--gold-light);background:var(--gold-bg);}
+.char-card.selected{border-color:var(--gold);background:var(--gold-bg);}
+.char-card.selected::after{content:'✓';position:absolute;top:6px;right:8px;font-size:10px;color:var(--gold);font-weight:700;}
+.char-preview{display:flex;justify-content:center;gap:2px;margin-bottom:6px;}
+.char-preview img{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border);}
+.char-preview .none-preview{width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.char-name{font-size:11px;color:var(--text);font-weight:500;margin-bottom:2px;}
+.char-desc{font-size:9px;color:var(--muted);line-height:1.4;}
+.char-auto-badge{display:inline-block;font-size:8px;color:var(--gold);border:1px solid rgba(160,120,56,0.3);border-radius:3px;padding:1px 4px;margin-top:3px;letter-spacing:0.05em;}
 .avatar.user{background:var(--bg2);border:1px solid var(--border);color:var(--text2);}
 .bubble{max-width:78%;padding:11px 15px;border-radius:10px;font-size:13.5px;line-height:1.65;letter-spacing:0.01em;}
 .bubble.agent{background:var(--white);border:1px solid var(--border);color:var(--text2);box-shadow:0 2px 8px rgba(0,0,0,0.04);}
@@ -628,7 +634,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
     <div class="menu-divider"></div>
     <div class="icon-picker-wrap">
       <div class="icon-picker-label">AIエージェント アイコン</div>
-      <div class="icon-picker-grid" id="iconPickerGrid"></div>
+      <div class="char-selector" id="charSelector"></div>
     </div>
     <div class="menu-version">RENO.ai AI Agent</div>
     <div style="text-align:center;padding:6px 20px 0;">
@@ -933,34 +939,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Agent Icon Picker ──
 function initIconPicker() {
-  const grid = document.getElementById('iconPickerGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  AGENT_ICONS.forEach(ic => {
-    const el = document.createElement('div');
-    el.className = 'icon-picker-item' + (_agentIconId === ic.id ? ' selected' : '');
-    el.title = ic.label;
-    if (ic.type === 'img') {
-      el.innerHTML = `<img src="${ic.src}" alt="${ic.label}">`;
+  const sel = document.getElementById('charSelector');
+  if (!sel) return;
+
+  // キャラクター定義
+  const CHARS = [
+    {
+      id: 'female',
+      name: '女性',
+      icons: ['f1','f2','f3'],
+      defaultId: 'f1',
+      auto: true,
+    },
+    {
+      id: 'male',
+      name: '男性',
+      icons: ['m1','m2','m3'],
+      defaultId: 'm1',
+      auto: true,
+    },
+    {
+      id: 'none',
+      name: 'なし',
+      icons: [],
+      defaultId: 'none',
+      auto: false,
+    },
+  ];
+
+  // 現在どのキャラが選ばれているか判定
+  function getSelectedChar() {
+    if (_agentIconId.startsWith('f')) return 'female';
+    if (_agentIconId.startsWith('m')) return 'male';
+    return 'none';
+  }
+
+  sel.innerHTML = '';
+  CHARS.forEach(ch => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (getSelectedChar() === ch.id ? ' selected' : '');
+
+    // プレビュー画像
+    const preview = document.createElement('div');
+    preview.className = 'char-preview';
+    if (ch.icons.length > 0) {
+      ch.icons.forEach(iconId => {
+        const ic = AGENT_ICONS.find(i => i.id === iconId);
+        if (ic) {
+          const img = document.createElement('img');
+          img.src = ic.src;
+          img.alt = ic.label;
+          preview.appendChild(img);
+        }
+      });
     } else {
-      el.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
-      el.classList.add('none-icon');
+      const none = document.createElement('div');
+      none.className = 'none-preview';
+      none.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--border2)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
+      preview.appendChild(none);
     }
-    el.onclick = () => {
-      _agentIconId = ic.id;
-      _currentIconId = ic.id;
-      localStorage.setItem('reno_agent_icon', ic.id);
+    card.appendChild(preview);
+
+    // 名前
+    const name = document.createElement('div');
+    name.className = 'char-name';
+    name.textContent = ch.name;
+    card.appendChild(name);
+
+    // 自動切替バッジ
+    if (ch.auto) {
+      const badge = document.createElement('div');
+      badge.className = 'char-auto-badge';
+      badge.textContent = '表情 自動切替';
+      card.appendChild(badge);
+    } else {
+      const desc = document.createElement('div');
+      desc.className = 'char-desc';
+      desc.textContent = 'アイコンを非表示';
+      card.appendChild(desc);
+    }
+
+    card.onclick = () => {
+      _agentIconId = ch.defaultId;
+      _currentIconId = ch.defaultId;
+      localStorage.setItem('reno_agent_icon', ch.defaultId);
       playSound('chip');
-      grid.querySelectorAll('.icon-picker-item').forEach(e => e.classList.remove('selected'));
-      el.classList.add('selected');
+      sel.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
     };
-    grid.appendChild(el);
+
+    sel.appendChild(card);
   });
-  // ラベル補足
-  const note = document.createElement('div');
-  note.style.cssText = 'font-size:10px;color:var(--muted);margin-top:8px;width:100%;line-height:1.6;';
-  note.textContent = '女性アイコンは会話の流れで表情が自動で切り替わります';
-  grid.parentElement.appendChild(note);
 }
 
 // ── PIN & Token Auth ──
