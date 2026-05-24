@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>RENO.ai</title>
+<title>RENO</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#a07838">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="RENO.ai">
+<meta name="apple-mobile-web-app-title" content="RENO">
 <link rel="apple-touch-icon" href="/icons/icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -672,7 +672,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
       <div class="icon-picker-label">AIエージェント アイコン</div>
       <div class="char-selector" id="charSelector"></div>
     </div>
-    <div class="menu-version">RENO.ai AI Agent</div>
+    <div class="menu-version">RENO AI Agent</div>
     <div style="text-align:center;padding:6px 20px 0;">
       <a href="/lp.html" target="_blank" style="font-size:11px;color:var(--muted);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:color 0.15s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--muted)'">サービス紹介ページ →</a>
     </div>
@@ -747,7 +747,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
     <div class="qr-img-wrap">
       <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASIAAAEiCAIAAADS3EjhAAAFF0lEQVR4nO3dO44UMRRAURrNFggQ+18aImARRTqRBWOunqvmnLy6qj9XDvrJfl3X9QUofZ1+AHg+mUFOZpCTGeRkBjmZQU5mkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpCTGeRkBjmZQU5mkHvbufjH92//6zkO8fPX7w9fO/VpdM98x0+js/NpWM0gJzPIyQxyMoOczCAnM8jJDHIyg5zMILc1BbK28695Z2c6oZtsuONntfPMd3y/O6xmkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpALp0DW7jhRsX7lnZkJe3K8d8ffxprVDHIyg5zMICczyMkMcjKDnMwgJzPIyQxyY1MgvDc1nXDmnhzPYzWDnMwgJzPIyQxyMoOczCAnM8jJDHIyg5wpkH/Q7VGx88rdTiFmRP4XqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5MamQO44YXDmM3cn0UzNiJz5Oe+wmkFOZpCTGeRkBjmZQU5mkJMZ5GQGOZlBLpwC6XbOmNLNW9zx2h3P+22sWc0gJzPIyQxyMoOczCAnM8jJDHIyg5zMIPe6rmv6GT6FM6cxnrfrxpmsZpCTGeRkBjmZQU5mkJMZ5GQGOZlBTmaQ29oL5Mw9Krpr1858R3d05ne0w2oGOZlBTmaQkxnkZAY5mUFOZpCTGeRkBrnwRJgpU9MYU/tqdPed2oOke0dTE0JWM8jJDHIyg5zMICczyMkMcjKDnMwgJzPIbU2B3PE8kZ3Jhp1ru7mHbnbhjnuQnPlUVjPIyQxyMoOczCAnM8jJDHIyg5zMICczyL2u6/rwxd1UxNR9n3cyy9TuF2uf7b5WM8jJDHIyg5zMICczyMkMcjKDnMwgJzPIhSfCdDMTO688NQdw5vTJHedaum/QiTBwYzKDnMwgJzPIyQxyMoOczCAnM8jJDHLhiTBnzhCcOefR3fdMU8889R1ZzSAnM8jJDHIyg5zMICczyMkMcjKDnMwgtzUFcub5KWeegbJ25vk4O7pv4Y6zR1YzyMkMcjKDnMwgJzPIyQxyMoOczCAnM8i9ruuKXvrM/+OnTma547WdqUmdqRkgqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5LamQKZmF9aet8vI1G4fZ87xrJ15Po7VDHIyg5zMICczyMkMcjKDnMwgJzPIyQxy4V4gz9NNY3y2PTnWzvycd96v1QxyMoOczCAnM8jJDHIyg5zMICczyMkMcm87F99xr4i19T/9Z+6rsTP30D3V1ATJmaxmkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpDbmgJZO/Of/qm5h7VukuOOJ9E8j9UMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHLhFMja1N4YO6bmPLpJjjN3N3keqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5MamQO5oZ5JjSvfMZ06QnHkSjdUMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHKmQP7BmfuXdHMP3czE1M4oa919rWaQkxnkZAY5mUFOZpCTGeRkBjmZQU5mkBubApnalWHH1O4X6/ueORVx5hk3U/MlVjPIyQxyMoOczCAnM8jJDHIyg5zMICczyL2u6/rwxWeegbJj6syXM2cXusmV572jNasZ5GQGOZlBTmaQkxnkZAY5mUFOZpCTGeS2pkCAv2E1g5zMICczyMkMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHIyg5zMICczyMkMcjKDnMwgJzPI/QH9x6aAYpdPhwAAAABJRU5ErkJggg==" alt="QR Code">
     </div>
-    <div class="qr-url">https://reno.taskra.jp</div>
+    <div class="qr-url">reno.taskra.jp</div>
     <div class="qr-divider"></div>
     <div class="qr-pwa-title">ホーム画面に追加（PWAとして使う）</div>
     <div class="qr-pwa-desc">アプリのようにフルスクリーンで快適に利用できます。</div>
@@ -785,7 +785,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
     <div style="width:100%;height:4px;background:linear-gradient(90deg,#a07838,#c8a96e,#a07838);"></div>
     <div style="padding:28px 52px 18px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #222;box-sizing:border-box;">
       <div>
-        <div style="font-size:26px;font-weight:700;letter-spacing:0.12em;color:#ede9e3;line-height:1;">RENO.ai</div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:0.12em;color:#ede9e3;line-height:1;">RENO</div>
         <div style="font-size:9px;color:#7a6a50;letter-spacing:0.28em;text-transform:uppercase;margin-top:4px;">INTERIOR VISUALIZER</div>
       </div>
       <div style="text-align:right;">
@@ -821,8 +821,8 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
       <div id="pdf-notes-text" style="font-size:12px;color:#968f88;line-height:1.75;"></div>
     </div>
     <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 52px;background:#141414;border-top:1px solid #222;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;">
-      <div style="font-size:8px;color:#505050;letter-spacing:0.04em;line-height:1.6;">本提案書はRENO.ai AIエージェントが生成したイメージです。実際の施工内容・費用は担当者にご確認ください。</div>
-      <div style="font-size:10px;color:#5a5040;letter-spacing:0.14em;font-weight:600;">RENO.ai</div>
+      <div style="font-size:8px;color:#505050;letter-spacing:0.04em;line-height:1.6;">本提案書はRENO AIエージェントが生成したイメージです。実際の施工内容・費用は担当者にご確認ください。</div>
+      <div style="font-size:10px;color:#5a5040;letter-spacing:0.14em;font-weight:600;">RENO</div>
     </div>
   </div>
 </div>
@@ -835,7 +835,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 <!-- PIN Screen -->
 <div id="pinScreen">
   <div class="pin-card">
-    <div class="pin-logo"><img src="data:image/jpeg;base64,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" alt="RENO.ai" style="width:44px;height:46px;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;"><br>RENO.ai<span class="pin-logo-badge">AI Agent</span></div>
+    <div class="pin-logo"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABQAFADASIAAhEBAxEB/8QAHQAAAQUBAQEBAAAAAAAAAAAABgIDBAUHCQAIAf/EAEwQAAEDAgQBBgcKCA8AAAAAAAECAwQFBgAHESESCBMiMUFhJTJCRlFxshQVF3JzdJGV0dIWI0RTVIGSoyQmM0NSV2NkdYWTlqGx0//EABkBAAMBAQEAAAAAAAAAAAAAAAECAwAEBf/EACwRAAEDAgQFAgcBAAAAAAAAAAEAAhEDIRIxQVFhcZHB8BOxBCIyUqHR4fH/2gAMAwEAAhEDEQA/APoflr8tn4ASi0rSRGm3zJZDzz0hPOM0xpXiKUjy3VDdKDsB0la6gHmLfOb955k1Bydc901atyFnUmVLWUJ7koBCUjuAAxHzgvmbmPmnd1zz3CuTVKo/I3Pio4ylCR3JQlKR3DAdzxUdNsACFlONRfIOr7uvxz9uGTUH/wA+7/qH7cG0XJKtyKNSKnJrdqUhmqxEzojNVuCPFfUwpSkpWW1HVIJQrTX0YUckJ488bA/3ZF+3EvWp/cmwu2QGZ7+uvPu6/HOEqqD/AOfd/bP24O/gPqrh4WbpsWQ72Nt3ZDBPq4lAf84qbpyZve0aaqpVC3JZpSRqanBKJkMD0l9hS0D9ZGCKtMmA4LYXZwhZU97XXn3f2z9uGVz3ydQ+7+2ftxD57UA66g9RHbhKl69WKpUa2PnPfOWVQbm2rdtYochBB/gstYQruU2SUKHcoEY6lchzlzo5QwVZ93ojwL9isF5p6Onm2Kq0kdNaEeQ6nrUgbEdJOgBA49lzBfk9fkzLXNi0LogOlmTS6pHkAp8pHGAtJ7lIKknuOARKyrqq7rU5ny7ntHELj1cT68OVVwCqzfl3PbOIYd6Y9eCstKzie4YGWgB8zIHb/bScD9j2NKv16qpZqdMpEalwvd8ubVn1Msttc4hrXVKFEnidQNNO3FtnGvwfloSRvZkDq+Wk4ayveIs/NbhOn8WEjX/MYeOMOLaMjfurEAvg+WT5yibkOczCzBsKe+dg0K4pkq9SnmkJ+lQwxNoGYeQ86LVm01W1jIPDHq1Mk6xpPcl9lSmnfiknvGM5U8dTufpwSWNmZXMvH3hS323KdJHDNo81vn4E5Hah9g9FYPp2UOtKgd8ULakZg8D52Sgt5I7iVO3s8n0U6rMU20L7fPDErkZtMWm1R09TUxpOiI7izsJDYCCojnEjXjGVVqlzrdq02l1OI9AqMJ5ceTFkJ4XGXEnRSFDsIIwVZo23SY0Oi3Xbba49tXEh3m6c64XV02U0QJENSzutKeNC0KO6m3E67g4ssw5hv3LG2L2fUXK5DfVbVZeVuqQW2g5DfWe1ZY4mye3mATvhGODSMP0m3I+W55JiJmcx+VmanAPXh2mOa1aDv+UN+2MQCvXD9KXpV4J/vDXtjHWoq2q72lUm/OHPbOIfH0xv24VV3PCs3f8AKHPbOInHqoevGWWkZxPeDstN9ALMg6k/LScE1hW9SMv7QrrmYdSlW+3eFKRBgQIcX3RUG2S+08JzrJKeBjVkAJJC3AolA0GpsbuuG2rDtbLKuuRRcF5qtCEKfBmsBVPpwS9I0lOg7SHNSeBrxE8PEvi2TjBq5XqhclYmVWqzpFSqUxwvSJcpwuOurPWpSj1n/rqGwxwsa6ozDkP7oruIa6dUS3xl1VrJbiznVR6pb9QJ9769TFl2FMA6wlegKHB5TSwlae0duBAq1wSWTmVV7DXLZiKYnUieAioUWot89CnJHUHWiesdi0kLT1pUMarZGW9h5jw7hua2qfWalJo0NM17L5b2i1nj0UW5gHE6wNdeAJDx3Tr1KLuqmiJqXG477c8uSAYHn5fPOqC62o0jk+W1Bkp4ZNWuGZV4yFeMIqI7cYuAf0VuBQB7eaPowxTXPcvJ3uAunRM66oLccHtUzEkKcI9QdbH6xiiqlTuPOW9o6W4yZtVmc3FhwILYbZYZQnRtppHU202kepIBUo9ZxJzPrlPjsUa0KJLROpFAQ4HZzR/FzpzpBkvo9KOihtB7Utg+VhA02YcyZPC8+9uNymkXcMohBSnMO0tetWg6/pDXtjEFTmnbh2lO+F4Ov6Q17Yx3LnVpVXR76Tfl3PbOIZePGPXj8q72lWnj0SHfbOIge6Q37cZZajnI8TT8seI+ZUAfvpONHtS08p5+SVrzp9Jqq7udqUVuoSG4s8suMqncLqUrSnmiSzsAg8Wuw6WMqzke1gZZj0WZAH76Ti8onKkuChZZUGymaXT1QKNMYmsSVLdDq1tSvdKQoBXDoVbHQa6d+PMqsqPps9Oc7wYtfryXW0ta84ttpXuUtR7IoF8Qo9hwZtPpJgJW81PYktLL3OOAkCQAvThCdxtse3XFdlRWJlFs3M6fAmPwZkWlQX2JEZZQ404mpxilaVDqII11xU51511TPC6Ytdq8KJAksREww3DUsoKQta9TxknXVZ+jCsunQcus2t9/eSHp9ZR8OGub8O1tTO0yZ1GuqUkGqS3K/DRHtavKRmNlrWqtaMGnUCvpSt68YVNY5uTUGCRrLaVrqI+v8sw3whKlcZBQej8/lzE22rqqdnV+FWqPLXCqUJznGXkAHQ6aEFJ2UkgkFJ2UCQdjg3vm2KXdltO39aEVuFDQtKa7bzJJ953lHQOtg7mI4rxD/Nq/Fq8kmrGigcOh17Ht02lHE1BOo8/3qs4W7th2kOeF4Hzlr2xiApe++2JNHc8M0/5y17acdaijfO6xpuVub952nUWy3KpNWkRzxDTjRxlTax3KQpCh3HARz24x2g5fHIDTylizeVnSItLzAiMBh5qV0I9VZT4iVrA6DqepKyCCOirYAjk/fXJrzWy1qLsK4svrhp7rZ05xMBbzKu9LjYUlQ7wcAFFDd1XlJutmgNyGGWBRqUzSWS0Tq422pxQWrXyiXDrptsMD6ne/FsbDukHe2azr/hz33cJVYt0DzarP1e993AADRAWJJuVUlzXBdl7mM1YrVfiy7fg3JTa3DRDlQ5zzzSeFDyHkqSppSVAhSE9uKY2JdB82qz9Xvfdwn8AbqPVbNZ+r3vu4DmteIKIJaZCLzmfZn9UdA+tql/74s7Wz6oVlVZVSo+WNCiyVMrjuBVSnuNutLTwrbcQp4pWhQ60qBH0DGdGwLqPmzWfq977uPfB7datk2xWlHupz33cSNCm4QZ6n9pxUcDI9goVxVaLV6zKmQqXGosV1WrcCItxbTI06klxSlH07ntwWZA5fTc2c6rKtKntF5+qVaO0oDyGgsKdWe5KErUfVidYfJfzZzNqLcO38v69KUsgF56EuOwnvU64EpA/XjrZyBeQLG5MjD12XS9Hq1/zWCwFMdJinMq8ZtokAqWryl6DYcI21Kq2aICnmV//Z" alt="RENO.ai" style="width:44px;height:46px;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;"><br>RENO<span class="pin-logo-badge">AI Agent</span></div>
     <div class="pin-divider"></div>
     <div class="pin-label">PIN を入力</div>
     <div class="pin-dots">
@@ -867,7 +867,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
   <div id="header">
     <div style="display:flex;align-items:center;gap:7px;">
       <img src="data:image/jpeg;base64,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" alt="RENO.ai" style="width:22px;height:23px;flex-shrink:0;">
-      <span class="h-logo">RENO.ai</span>
+      <span class="h-logo">RENO</span>
       <span class="h-badge">AI Agent</span>
     </div>
     <div class="h-right">
@@ -899,7 +899,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const EDGE_URL      = `${SUPABASE_URL}/functions/v1/reno-agent`;
 const EDGE_HEADERS  = { 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON };
 
-const SYSTEM_PROMPT = `あなたはRENO.aiのAIリフォームコンサルタントです。
+const SYSTEM_PROMPT = `あなたはRENOのAIリフォームコンサルタントです。
 施主とフレンドリーにチャットし、要望をヒアリングして施工後のビジュアルイメージ生成を提案します。
 
 ## 会話の流れ
@@ -1275,7 +1275,7 @@ function initChat() {
   chatStarted = true;
   fetchUsage();
   addAgentMessage(
-    'こんにちは！RENO.aiへようこそ。\nどのお部屋をリフォームしたいとお考えですか？',
+    'こんにちは！RENOへようこそ。\nどのお部屋をリフォームしたいとお考えですか？',
     null, null,
     ['リビング', 'キッチン', '浴室・洗面所', '寝室', '玄関']
   );
@@ -1589,13 +1589,13 @@ async function shareViaLine(src) {
     const file = new File([blob], 'reno-ai.png', { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
-        title: 'RENO.ai リフォームイメージ',
+        title: 'RENO リフォームイメージ',
         text: 'AIが生成したリフォーム後のイメージです✨',
         files: [file],
       });
     } else {
       // fallback: LINE URL scheme with text only
-      const url = encodeURIComponent('AIが生成したリフォームイメージをRENO.aiで確認しました！');
+      const url = encodeURIComponent('AIが生成したリフォームイメージをRENOで確認しました！');
       window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(location.href)}&text=${url}`, '_blank');
     }
   } catch(e) {
@@ -1609,7 +1609,7 @@ async function shareNative(src) {
     const file = new File([blob], 'reno-ai.png', { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
-        title: 'RENO.ai リフォームイメージ',
+        title: 'RENO リフォームイメージ',
         text: 'AIが生成したリフォーム後のイメージです✨',
         files: [file],
       });
@@ -2308,14 +2308,14 @@ async function generateQR(pin, baseUrl) {
 }
 
 function copyGpinInfo(pin, url) {
-  const text = `RENO.ai リフォームシミュレーター\nPIN: ${pin}\n${url}`;
+  const text = `RENO リフォームシミュレーター\nPIN: ${pin}\n${url}`;
   navigator.clipboard.writeText(text).then(() => alert('コピーしました！'));
 }
 
 async function shareGpin(pin, url, label) {
-  const text = `【RENO.ai】${label}様\nリフォームのイメージを確認できます。\n\nPIN番号: ${pin}\n${url}\n\n※有効期限・回数制限があります。`;
+  const text = `【RENO】${label}様\nリフォームのイメージを確認できます。\n\nPIN番号: ${pin}\n${url}\n\n※有効期限・回数制限があります。`;
   if (navigator.share) {
-    await navigator.share({ title: 'RENO.ai', text });
+    await navigator.share({ title: 'RENO', text });
   } else {
     navigator.clipboard.writeText(text).then(() => alert('テキストをコピーしました！'));
   }
