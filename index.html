@@ -1540,14 +1540,18 @@ async function useSampleImage(idx, prompt) {
     autoSaveSession(src);
   } catch(e) {
     removeTyping();
-    // フォールバック：別のサンプル画像をアフターとして表示
-    const fallbackIdx = (idx + 1) % SAMPLE_IMAGES.length;
-    const fallbackSrc = SAMPLE_IMAGES[fallbackIdx].src;
-    addAgentMessage(
-      '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。',
-      fallbackSrc, beforeURL,
-      ['別の箇所も試す', 'スタイルを変えてみる', '昼/夜を見る', '概算を見る', '提案書を作成']
-    );
+    try {
+      const res = await fetch('/samples/after.jpg');
+      const blob = await res.blob();
+      const fallbackSrc = URL.createObjectURL(blob);
+      addAgentMessage(
+        '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。',
+        fallbackSrc, beforeURL,
+        ['別の箇所も試す', 'スタイルを変えてみる', '昼/夜を見る', '概算を見る', '提案書を作成']
+      );
+    } catch(e2) {
+      addAgentMessage('現在AIイメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
+    }
   }
 }
 async function handlePhoto(event, prompt) {
@@ -1675,17 +1679,7 @@ async function generateWithFiles(beforeFile, idealFile) {
 // エラー時フォールバック画像取得
 async function getFallbackImage(prompt) {
   try {
-    // プロンプトから部屋タイプを推定してサンプルを選択
-    const p = prompt.toLowerCase();
-    let sample;
-    if (p.includes('kitchen') || p.includes('キッチン')) sample = SAMPLE_IMAGES.find(s => s.label === 'キッチン');
-    else if (p.includes('bathroom') || p.includes('浴室')) sample = SAMPLE_IMAGES.find(s => s.label === '浴室');
-    else if (p.includes('washroom') || p.includes('洗面')) sample = SAMPLE_IMAGES.find(s => s.label === '洗面所');
-    else if (p.includes('bedroom') || p.includes('寝室') || p.includes('子供')) sample = SAMPLE_IMAGES.find(s => s.label === '子供部屋');
-    else if (p.includes('washitsu') || p.includes('和室')) sample = SAMPLE_IMAGES.find(s => s.label === '和室');
-    else sample = SAMPLE_IMAGES[0]; // デフォルトはリビング
-    if (!sample) return null;
-    const res = await fetch(sample.src);
+    const res = await fetch('/samples/after.jpg');
     const blob = await res.blob();
     return URL.createObjectURL(blob);
   } catch(e) { return null; }
