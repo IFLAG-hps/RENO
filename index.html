@@ -101,6 +101,31 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 .menu-item-label{font-size:14px;color:var(--text);font-weight:400;}
 .menu-item-desc{font-size:12px;color:var(--muted);margin-top:1px;}
 .menu-item-arrow{color:var(--border2);}
+/* ── QR Modal ── */
+#qrModal{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+#qrModal.open{display:flex;}
+.qr-card{background:var(--white);border-radius:20px;padding:28px 24px 20px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.qr-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.qr-header-icon{font-size:22px;}
+.qr-title{font-size:18px;font-weight:700;color:var(--text);}
+.qr-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+.qr-img-wrap{background:#f8f8f6;border-radius:12px;padding:16px;text-align:center;margin-bottom:8px;}
+.qr-img-wrap img{width:180px;height:180px;display:block;margin:0 auto;}
+.qr-url{font-size:11px;color:var(--muted);text-align:center;margin-bottom:18px;letter-spacing:0.04em;}
+.qr-divider{height:1px;background:var(--border);margin:16px 0;}
+.qr-pwa-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.qr-pwa-desc{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.qr-tab-row{display:flex;gap:8px;margin-bottom:12px;}
+.qr-tab{flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;cursor:pointer;background:var(--bg);color:var(--text2);text-align:center;transition:all 0.15s;font-family:inherit;}
+.qr-tab.active{border-color:var(--gold);background:var(--gold-bg);color:var(--gold);font-weight:600;}
+.qr-steps{background:var(--bg);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.9;}
+.qr-steps b{color:var(--gold);}
+.qr-steps-note{font-size:10px;color:var(--muted);margin-top:6px;}
+.qr-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:8px;}
+.qr-btn-ghost{flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:transparent;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px;}
+.qr-btn-copy{flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:transparent;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit;}
+.qr-btn-close{flex:1;padding:9px;border:none;border-radius:8px;background:var(--gold);font-size:13px;color:white;cursor:pointer;font-weight:600;font-family:inherit;}
+
 .menu-divider{height:1px;background:var(--border);margin:4px 0;}
 .menu-version{font-size:11px;color:var(--muted);text-align:center;padding:16px 20px 0;letter-spacing:0.06em;}
 /* SE toggle */
@@ -707,6 +732,50 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
 </div>
 
 <!-- PDF overlay -->
+
+<!-- QR Modal -->
+<div id="qrModal" onclick="closeQrModal(event)">
+  <div class="qr-card">
+    <div class="qr-header">
+      <span class="qr-header-icon">📱</span>
+      <span class="qr-title">スマホで開く</span>
+    </div>
+    <p class="qr-desc">カメラでQRコードを読み取ると、すぐに開けます。</p>
+    <div class="qr-img-wrap">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASIAAAEiCAIAAADS3EjhAAAFF0lEQVR4nO3dO44UMRRAURrNFggQ+18aImARRTqRBWOunqvmnLy6qj9XDvrJfl3X9QUofZ1+AHg+mUFOZpCTGeRkBjmZQU5mkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpCTGeRkBjmZQU5mkHvbufjH92//6zkO8fPX7w9fO/VpdM98x0+js/NpWM0gJzPIyQxyMoOczCAnM8jJDHIyg5zMILc1BbK28695Z2c6oZtsuONntfPMd3y/O6xmkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpALp0DW7jhRsX7lnZkJe3K8d8ffxprVDHIyg5zMICczyMkMcjKDnMwgJzPIyQxyY1MgvDc1nXDmnhzPYzWDnMwgJzPIyQxyMoOczCAnM8jJDHIyg5wpkH/Q7VGx88rdTiFmRP4XqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5MamQO44YXDmM3cn0UzNiJz5Oe+wmkFOZpCTGeRkBjmZQU5mkJMZ5GQGOZlBLpwC6XbOmNLNW9zx2h3P+22sWc0gJzPIyQxyMoOczCAnM8jJDHIyg5zMIPe6rmv6GT6FM6cxnrfrxpmsZpCTGeRkBjmZQU5mkJMZ5GQGOZlBTmaQ29oL5Mw9Krpr1858R3d05ne0w2oGOZlBTmaQkxnkZAY5mUFOZpCTGeRkBrnwRJgpU9MYU/tqdPed2oOke0dTE0JWM8jJDHIyg5zMICczyMkMcjKDnMwgJzPIbU2B3PE8kZ3Jhp1ru7mHbnbhjnuQnPlUVjPIyQxyMoOczCAnM8jJDHIyg5zMICczyL2u6/rwxd1UxNR9n3cyy9TuF2uf7b5WM8jJDHIyg5zMICczyMkMcjKDnMwgJzPIhSfCdDMTO688NQdw5vTJHedaum/QiTBwYzKDnMwgJzPIyQxyMoOczCAnM8jJDHLhiTBnzhCcOefR3fdMU8889R1ZzSAnM8jJDHIyg5zMICczyMkMcjKDnMwgtzUFcub5KWeegbJ25vk4O7pv4Y6zR1YzyMkMcjKDnMwgJzPIyQxyMoOczCAnM8i9ruuKXvrM/+OnTma547WdqUmdqRkgqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5LamQKZmF9aet8vI1G4fZ87xrJ15Po7VDHIyg5zMICczyMkMcjKDnMwgJzPIyQxy4V4gz9NNY3y2PTnWzvycd96v1QxyMoOczCAnM8jJDHIyg5zMICczyMkMcm87F99xr4i19T/9Z+6rsTP30D3V1ATJmaxmkJMZ5GQGOZlBTmaQkxnkZAY5mUFOZpDbmgJZO/Of/qm5h7VukuOOJ9E8j9UMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHLhFMja1N4YO6bmPLpJjjN3N3keqxnkZAY5mUFOZpCTGeRkBjmZQU5mkJMZ5MamQO5oZ5JjSvfMZ06QnHkSjdUMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHKmQP7BmfuXdHMP3czE1M4oa919rWaQkxnkZAY5mUFOZpCTGeRkBjmZQU5mkBubApnalWHH1O4X6/ueORVx5hk3U/MlVjPIyQxyMoOczCAnM8jJDHIyg5zMICczyL2u6/rwxWeegbJj6syXM2cXusmV572jNasZ5GQGOZlBTmaQkxnkZAY5mUFOZpCTGeS2pkCAv2E1g5zMICczyMkMcjKDnMwgJzPIyQxyMoOczCAnM8jJDHIyg5zMICczyMkMcjKDnMwgJzPI/QH9x6aAYpdPhwAAAABJRU5ErkJggg==" alt="QR Code">
+    </div>
+    <div class="qr-url">https://reno.taskra.jp</div>
+    <div class="qr-divider"></div>
+    <div class="qr-pwa-title">ホーム画面に追加（PWAとして使う）</div>
+    <div class="qr-pwa-desc">アプリのようにフルスクリーンで快適に利用できます。</div>
+    <div class="qr-tab-row">
+      <div class="qr-tab active" onclick="switchQrTab('ios',this)">🍎 iOS（Safari）</div>
+      <div class="qr-tab" onclick="switchQrTab('android',this)">🤖 Android（Chrome）</div>
+    </div>
+    <div id="qrStepsIos" class="qr-steps">
+      1. <b>Safari</b> で reno.taskra.jp を開く<br>
+      2. 画面下の<b>共有ボタン</b>（口に↑のアイコン）をタップ<br>
+      3. メニューから「<b>ホーム画面に追加</b>」を選択<br>
+      4. 右上の「<b>追加</b>」をタップで完了
+      <div class="qr-steps-note">※ Chromeアプリでは追加できません。必ずSafariで開いてください。</div>
+    </div>
+    <div id="qrStepsAndroid" class="qr-steps" style="display:none;">
+      1. <b>Chrome</b> で reno.taskra.jp を開く<br>
+      2. 右上の<b>メニュー（⋮）</b>をタップ<br>
+      3.「<b>アプリをインストール</b>」または「ホーム画面に追加」を選択<br>
+      4.「<b>インストール</b>」をタップで完了
+    </div>
+    <div class="qr-footer">
+      <button class="qr-btn-ghost" onclick="window.open('/lp.html','_blank')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        サービスサイト
+      </button>
+      <button class="qr-btn-copy" onclick="copyQrUrl()">URLをコピー</button>
+      <button class="qr-btn-close" onclick="closeQrModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- PDF Template (hidden) -->
 <div id="pdfTemplate" style="position:fixed;left:-9999px;top:0;width:794px;background:#0c0c0c;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif;color:#ede9e3;padding:0;margin:0;display:none;">
   <div style="width:794px;min-height:1123px;background:#0c0c0c;position:relative;box-sizing:border-box;">
@@ -800,6 +869,9 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
     </div>
     <div class="h-right">
       <div class="h-usage" id="usageBadge"></div>
+      <button class="h-menu-btn" id="qrBtn" onclick="openQrModal()" title="スマホで開く" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/><rect x="19" y="19" width="2" height="2"/></svg>
+      </button>
       <button class="h-menu-btn" onclick="openMenuSheet()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
@@ -950,6 +1022,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const tog = document.getElementById('seToggle');
   if (tog) tog.checked = seEnabled;
   initIconPicker();
+  // PCならQRボタン表示
+  const isTouch = navigator.maxTouchPoints > 0;
+  if (!isTouch) {
+    const qrBtn = document.getElementById('qrBtn');
+    if (qrBtn) qrBtn.style.display = 'flex';
+  }
   // PWAモード（スタンドアロン）なら「ブラウザで開く」を表示
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
@@ -1056,6 +1134,27 @@ function initIconPicker() {
 
     sel.appendChild(card);
   });
+}
+
+// ── QR Modal ──
+function openQrModal() { document.getElementById('qrModal').classList.add('open'); }
+function closeQrModal(e) {
+  if (!e || e.target === document.getElementById('qrModal')) {
+    document.getElementById('qrModal').classList.remove('open');
+  }
+}
+function switchQrTab(tab, el) {
+  document.querySelectorAll('.qr-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('qrStepsIos').style.display     = tab === 'ios'     ? 'block' : 'none';
+  document.getElementById('qrStepsAndroid').style.display = tab === 'android' ? 'block' : 'none';
+}
+async function copyQrUrl() {
+  try { await navigator.clipboard.writeText('https://reno.taskra.jp'); }
+  catch(e) { const ta = document.createElement('textarea'); ta.value='https://reno.taskra.jp'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  const btn = event.target;
+  btn.textContent = 'コピーしました！';
+  setTimeout(() => { btn.textContent = 'URLをコピー'; }, 2000);
 }
 
 // ── Open in Browser (PWA) ──
