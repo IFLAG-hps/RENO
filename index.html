@@ -1541,6 +1541,7 @@ async function useSampleImage(idx, prompt) {
     );
   }
 }
+async function handlePhoto(event, prompt) {
   const file = event.target.files[0];
   if (!file) return;
   const beforeURL = URL.createObjectURL(file);
