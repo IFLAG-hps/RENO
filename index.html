@@ -1652,7 +1652,7 @@ async function generateWithFiles(beforeFile, idealFile) {
       form.append('image', bf, bf.name);
     }
 
-    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 30000);
+    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 90000);
     const data = await res.json();
 
     if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
@@ -1946,7 +1946,7 @@ async function generateNight(btn, afterSrc, beforeSrc) {
     form.append('prompt', nightPrompt);
     form.append('image', file, 'after.png');
 
-    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 30000);
+    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 90000);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || data.error || JSON.stringify(data));
 
