@@ -920,6 +920,25 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const EDGE_URL      = `${SUPABASE_URL}/functions/v1/reno-agent`;
 const EDGE_HEADERS  = { 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON };
 
+// ── Timeout付きfetch（画像生成など時間のかかるリクエスト用）──
+// AbortControllerで指定ミリ秒後に強制中断し、タイムアウト専用のエラーを投げる
+async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      const timeoutErr = new Error('TIMEOUT');
+      timeoutErr.isTimeout = true;
+      throw timeoutErr;
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const SYSTEM_PROMPT = `あなたはRENOのAIリフォームコンサルタントです。
 施主とフレンドリーにチャットし、要望をヒアリングして施工後のビジュアルイメージ生成を提案します。
 
@@ -1407,6 +1426,11 @@ function tapChip(text) {
     showUploadCard('リフォームしたいお部屋の写真を選んでください');
     return;
   }
+  if (text === 'もう一度試す') {
+    addUserMessage(text);
+    generateWithFiles(window._beforeFile, null);
+    return;
+  }
   addUserMessage(text);
   history.push({ role:'user', content: text });
   callAgent();
@@ -1628,7 +1652,7 @@ async function generateWithFiles(beforeFile, idealFile) {
       form.append('image', bf, bf.name);
     }
 
-    const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
+    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 30000);
     const data = await res.json();
 
     if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
@@ -1660,14 +1684,16 @@ async function generateWithFiles(beforeFile, idealFile) {
     removeTyping();
     // フォールバック：サンプル画像でビフォーアフターを表示
     const fallbackSrc = await getFallbackImage(window._genPrompt || '');
+    const timeoutMsg = '画像生成に時間がかかりすぎたため中断しました。混雑している可能性があります。参考イメージをご覧いただくか、少し時間をおいてもう一度お試しください。';
+    const headline = e.isTimeout ? timeoutMsg : '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。';
     if (fallbackSrc) {
       addAgentMessage(
-        '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。',
+        headline,
         fallbackSrc, beforeURL,
-        ['別の箇所も試す', 'スタイルを変えてみる', '昼/夜を見る', '概算を見る', '提案書を作成']
+        ['もう一度試す', '別の箇所も試す', 'スタイルを変えてみる', '概算を見る', '提案書を作成']
       );
     } else {
-      addAgentMessage('現在AIイメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
+      addAgentMessage(e.isTimeout ? timeoutMsg : '現在AIイメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
     }
   }
 }
@@ -1920,7 +1946,7 @@ async function generateNight(btn, afterSrc, beforeSrc) {
     form.append('prompt', nightPrompt);
     form.append('image', file, 'after.png');
 
-    const res  = await fetch(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form });
+    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 30000);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || data.error || JSON.stringify(data));
 
@@ -1933,7 +1959,9 @@ async function generateNight(btn, afterSrc, beforeSrc) {
 
   } catch(e) {
     document.getElementById('dn-card')?.remove();
-    addAgentMessage('現在夜間イメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
+    addAgentMessage(e.isTimeout
+      ? '夜間イメージの生成に時間がかかりすぎたため中断しました。少し時間をおいてもう一度お試しください。'
+      : '現在夜間イメージ生成をご利用いただけません。しばらく経ってから再度お試しください。');
   } finally {
     btn.disabled = false;
     btn.style.opacity = '';
