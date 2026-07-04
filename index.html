@@ -2606,11 +2606,13 @@ function showGpinResult(data) {
         使用回数：${data.max_uses}回まで
       </div>
       <div id="gpinQrWrap" style="margin:0 auto 12px;width:160px;height:160px;background:var(--bg2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;">QR生成中...</div>
-      <div style="font-size:10.5px;color:var(--muted);word-break:break-all;background:var(--bg2);border-radius:6px;padding:8px 10px;margin-bottom:12px;">${fullUrl}</div>
-      <div class="gpin-result-btns">
-        <button class="gpin-copy-btn" onclick="copyGpinUrl('${fullUrl}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;margin-right:5px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>URLをコピー
+      <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--muted);word-break:break-all;background:var(--bg2);border-radius:6px;padding:8px 10px;margin-bottom:12px;">
+        <span style="flex:1;">${fullUrl}</span>
+        <button onclick="copyGpinUrl('${fullUrl}')" title="URLをコピー" style="flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
+      </div>
+      <div class="gpin-result-btns">
         <button class="gpin-copy-btn" onclick="copyGpinInfo('${data.pin}','${url}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:middle;margin-right:5px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>PINをコピー
         </button>
