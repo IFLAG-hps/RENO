@@ -628,7 +628,7 @@ body{background:var(--bg);font-family:'DM Sans','Hiragino Sans',sans-serif;color
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <button class="menu-item" onclick="openGuestPinPanel();closeMenuSheet();">
+    <button class="menu-item" id="gpinMenuItem" style="display:none;" onclick="openGuestPinPanel();closeMenuSheet();">
       <div class="menu-item-icon" style="background:#f0faf2;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a9a5a" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
       </div>
@@ -1233,6 +1233,9 @@ if (window.visualViewport) {
 let pinValue = '';
 let sessionToken = '';
 let pinChecking = false;
+let sessionRole = '';
+let sessionEmail = '';
+let sessionLabel = '';
 
 // ページ読み込み時に必ずpinCheckingをリセット
 window.addEventListener('load', () => { pinChecking = false; pinValue = ''; renderDots(); });
@@ -1293,11 +1296,16 @@ async function checkPin() {
     const data = await res.json();
     if (res.ok && data.token) {
       sessionToken = data.token;
+      sessionRole  = data.role || '';
+      sessionEmail = data.email || '';
+      sessionLabel = data.label || '';
       pinValue = '';
       renderDots();
       document.getElementById('pinScreen').style.display = 'none';
       const app = document.getElementById('app');
       app.style.display = 'flex';
+      const gpinMenuItem = document.getElementById('gpinMenuItem');
+      if (gpinMenuItem) gpinMenuItem.style.display = sessionRole === 'admin' ? '' : 'none';
       if (!chatStarted) initChat();
       pinChecking = false;
     } else {
@@ -1314,6 +1322,9 @@ async function checkPin() {
 function lockApp() {
   pinValue = '';
   sessionToken = '';
+  sessionRole = '';
+  sessionEmail = '';
+  sessionLabel = '';
   pinChecking = false;
   renderDots();
   document.getElementById('pinScreen').style.display = 'flex';
@@ -2297,7 +2308,7 @@ function simConfirm() {
 
 // ── Usage ──
 let currentUsage = { plan:'free', count:0, limit:100, remaining:100 };
-const DEMO_BYPASS_LIMIT = true; // プレゼン用：回数制限を無効化
+const DEMO_BYPASS_LIMIT = false; // ユーザー管理導入により実際のプラン/残り回数を表示
 
 async function fetchUsage() {
   try {
