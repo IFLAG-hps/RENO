@@ -1027,8 +1027,18 @@ const SYSTEM_PROMPT = `あなたはRENOのAIリフォームコンサルタント
 - 親しみやすい言葉を使う`;
 
 
+// ── 安全なlocalStorageラッパー ──
+// 一部のブラウザ環境(iOS標準QRリーダー内蔵ブラウザ等)ではlocalStorageアクセスが
+// 例外を投げることがあり、放置すると以降のスクリプト全体が壊れるため必ずtry/catchする
+function safeLocalGet(key, fallback) {
+  try { return localStorage.getItem(key) ?? fallback; } catch (e) { return fallback; }
+}
+function safeLocalSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
 // ── SE Sound Engine ──
-let seEnabled = localStorage.getItem('reno_se') !== 'off';
+let seEnabled = safeLocalGet('reno_se', 'on') !== 'off';
 let audioCtx = null;
 
 function initAudioCtx() {
@@ -1038,7 +1048,7 @@ function initAudioCtx() {
 
 function toggleSE(on) {
   seEnabled = on;
-  localStorage.setItem('reno_se', on ? 'on' : 'off');
+  safeLocalSet('reno_se', on ? 'on' : 'off');
   if (on) { initAudioCtx(); playSound('chip'); }
 }
 
@@ -1210,7 +1220,7 @@ function initIconPicker() {
     card.onclick = () => {
       _agentIconId = ch.defaultId;
       _currentIconId = ch.defaultId;
-      localStorage.setItem('reno_agent_icon', ch.defaultId);
+      safeLocalSet('reno_agent_icon', ch.defaultId);
       playSound('chip');
       sel.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
@@ -1523,7 +1533,7 @@ const AGENT_ICONS = [
 // f1:通常, f2:笑顔, f3:思考中
 // male選択時は常にm1
 // 初期アイコン
-let _agentIconId = localStorage.getItem('reno_agent_icon') || 'f1';
+let _agentIconId = safeLocalGet('reno_agent_icon', 'f1');
 // 現在の表情 (f1/f2/f3 or m1 or none)
 let _currentIconId = _agentIconId;
 
@@ -1535,7 +1545,7 @@ const EMOTION_MAP = {
 };
 
 function getIconForEmotion(emotion) {
-  const base = _agentIconId;
+  const base = _agentIconId || 'f1';
   if (base === 'logo') return 'logo'; // ロゴは常に固定
   // male系
   if (base === 'm1' || base === 'm2' || base === 'm3') {
@@ -1547,7 +1557,7 @@ function getIconForEmotion(emotion) {
 }
 
 function getAgentIconHTML(iconId) {
-  const id = iconId || _currentIconId;
+  const id = iconId || _currentIconId || 'f1';
   if (id === 'none') return null;
   const ic = AGENT_ICONS.find(i => i.id === id);
   if (!ic || ic.type !== 'img') {
