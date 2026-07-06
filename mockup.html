@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RENO — 新機能UIプレビュー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafaf8;--bg2:#f4f2ee;--bg3:#eeeae3;
+  --white:#ffffff;
+  --text:#1a1814;--text2:#4a4540;--muted:#9a9490;
+  --border:#e0dbd3;--border2:#d0cbc2;
+  --gold:#a07838;--gold-l:#c8a96e;--gold-bg:#fdf8f0;
+  --green:#4a9a5a;--red:#c05040;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;color:var(--text);}
+.phone{max-width:420px;margin:0 auto;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.06);}
+
+/* header */
+.head{padding:16px 18px 14px;border-bottom:1px solid var(--border);background:var(--white);}
+.head-top{display:flex;align-items:baseline;gap:8px;}
+.logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;letter-spacing:0.1em;}
+.badge{font-size:9px;color:var(--gold);letter-spacing:0.16em;text-transform:uppercase;border:1px solid rgba(160,120,56,0.3);padding:2px 6px;border-radius:3px;}
+.sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:0.02em;}
+
+/* tabs */
+.tabs{display:flex;gap:6px;padding:12px 14px;background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{flex-shrink:0;font-size:11.5px;padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;letter-spacing:0.02em;white-space:nowrap;transition:all .15s;}
+.tab.active{background:var(--text);border-color:var(--text);color:var(--white);}
+
+/* chat area */
+.chat{flex:1;padding:18px 14px 40px;display:flex;flex-direction:column;gap:14px;}
+.msg{display:flex;gap:9px;max-width:100%;}
+.msg.user{flex-direction:row-reverse;}
+.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.avatar.agent{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);color:var(--gold);}
+.avatar.user{background:var(--bg2);border:1px solid var(--border);color:var(--text2);}
+.bubble{max-width:82%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;}
+.bubble.agent{background:var(--white);border:1px solid var(--border);color:var(--text2);box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.bubble.user{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);color:var(--gold);}
+
+.panel{display:none;}
+.panel.active{display:flex;flex-direction:column;gap:14px;}
+
+/* ── shared card ── */
+.card{background:var(--white);border:1px dashed var(--border2);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;}
+.card-title{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;letter-spacing:0.03em;margin-bottom:12px;color:var(--text);}
+.card-title svg{flex-shrink:0;color:var(--gold);}
+.new-tag{font-size:9px;color:var(--muted);letter-spacing:0.04em;margin-left:auto;font-weight:400;}
+.card::after{content:'sample';position:absolute;top:10px;right:14px;font-size:8.5px;color:var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'DM Sans',sans-serif;}
+
+/* ── 1. 画像診断 ── */
+.diag-photo{width:100%;height:150px;border-radius:8px;background:linear-gradient(135deg,#ded6c8,#c9bfae);position:relative;overflow:hidden;margin-bottom:12px;}
+.diag-scan{position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(160,120,56,0.25),transparent);height:40%;animation:scan 2.6s ease-in-out infinite;}
+@keyframes scan{0%{top:-40%}50%{top:100%}100%{top:-40%}}
+.diag-photo-label{position:absolute;bottom:8px;left:10px;font-size:10px;color:#fff;background:rgba(0,0,0,0.35);padding:3px 8px;border-radius:5px;letter-spacing:0.03em;}
+.diag-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bg2);}
+.diag-row:last-child{border-bottom:none;}
+.diag-part{font-size:12.5px;color:var(--text);}
+.diag-part-sub{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.sev{font-size:10px;padding:3px 9px;border-radius:12px;letter-spacing:0.02em;font-weight:500;flex-shrink:0;}
+.sev.low{background:#eef5ee;color:var(--green);}
+.sev.mid{background:var(--gold-bg);color:var(--gold);}
+.sev.high{background:#fbeeec;color:var(--red);}
+.diag-note{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.6;background:var(--bg);padding:9px 11px;border-radius:8px;}
+
+/* ── 2. RAGカタログ ── */
+.mat-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--bg2);}
+.mat-item:last-child{border-bottom:none;}
+.mat-thumb{width:52px;height:52px;border-radius:7px;background:var(--bg2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:9px;}
+.mat-info{flex:1;min-width:0;}
+.mat-maker{font-size:9.5px;color:var(--gold);letter-spacing:0.04em;margin-bottom:2px;}
+.mat-name{font-size:12.5px;color:var(--text);font-weight:500;}
+.mat-meta{font-size:10.5px;color:var(--muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;}
+.mat-case{font-size:9.5px;background:var(--bg2);color:var(--text2);padding:2px 7px;border-radius:9px;}
+.rag-source{margin-top:12px;font-size:10px;color:var(--muted);border-top:1px dashed var(--border);padding-top:9px;display:flex;justify-content:space-between;align-items:center;}
+.rag-source a{color:var(--gold);text-decoration:none;}
+
+/* ── 3. 見積+工期+補助金 ── */
+.est-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.est-box{background:var(--bg);border-radius:8px;padding:11px;text-align:center;}
+.est-box-label{font-size:10px;color:var(--muted);letter-spacing:0.03em;margin-bottom:5px;}
+.est-box-val{font-size:15px;font-weight:600;color:var(--text);}
+.est-box-val small{font-size:10px;color:var(--muted);font-weight:400;}
+.subsidy-item{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--gold-bg);border:1px solid rgba(160,120,56,0.15);border-radius:8px;margin-bottom:7px;}
+.subsidy-item:last-child{margin-bottom:0;}
+.subsidy-name{font-size:12px;color:var(--text);}
+.subsidy-name-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.subsidy-match{font-size:11px;font-weight:600;color:var(--gold);flex-shrink:0;margin-left:10px;}
+.est-note{margin-top:11px;font-size:10.5px;color:var(--muted);line-height:1.6;}
+
+/* ── 4. CRM連携 ── */
+.crm-status{display:flex;align-items:center;gap:8px;margin-bottom:13px;}
+.crm-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.crm-status-text{font-size:12px;color:var(--green);font-weight:500;}
+.crm-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg2);font-size:12px;}
+.crm-row:last-of-type{border-bottom:none;}
+.crm-row-label{color:var(--muted);}
+.crm-row-val{color:var(--text);font-weight:500;text-align:right;}
+.crm-btn{width:100%;margin-top:13px;padding:11px;border-radius:8px;border:none;background:var(--text);color:#fff;font-size:12.5px;font-family:inherit;letter-spacing:0.03em;cursor:pointer;}
+.crm-badge{font-size:9.5px;background:#eef5ee;color:var(--green);padding:2px 8px;border-radius:9px;letter-spacing:0.02em;}
+
+.section-note{font-size:10.5px;color:var(--muted);text-align:center;padding:10px 20px 0;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="head">
+    <div class="head-top">
+      <div class="logo">RENO</div>
+    </div>
+    <div class="sub">4つの新機能案</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab(0,this)">① 画像診断</div>
+    <div class="tab" onclick="showTab(1,this)">② カタログ参照</div>
+    <div class="tab" onclick="showTab(2,this)">③ 工期・補助金</div>
+    <div class="tab" onclick="showTab(3,this)">④ CRM連携</div>
+  </div>
+
+  <div class="chat">
+
+    <!-- ① 画像認識・劣化診断 -->
+    <div class="panel active" id="panel-0">
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="bubble agent">お写真ありがとうございます！AIで状態を確認しますね。</div>
+      </div>
+      <div class="msg user">
+        <div class="avatar user">Y</div>
+        <div class="bubble user">これがリビングの写真です</div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="card" style="max-width:82%;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            状態診断結果
+          </div>
+          <div class="diag-photo"><div class="diag-scan"></div><div class="diag-photo-label">解析中の写真</div></div>
+          <div class="diag-row">
+            <div><div class="diag-part">壁紙（クロス）</div><div class="diag-part-sub">継ぎ目の浮き・黄ばみが見られます</div></div>
+            <span class="sev mid">経年劣化 中</span>
+          </div>
+          <div class="diag-row">
+            <div><div class="diag-part">床材</div><div class="diag-part-sub">複合フローリング（推定）・傷少なめ</div></div>
+            <span class="sev low">良好</span>
+          </div>
+          <div class="diag-row">
+            <div><div class="diag-part">建具（ドア枠）</div><div class="diag-part-sub">日焼けによる色あせが目立ちます</div></div>
+            <span class="sev high">劣化 大</span>
+          </div>
+          <div class="diag-note">💡 壁紙の張替えと建具の再塗装を優先すると、費用対効果が高くなりそうです。</div>
+        </div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="bubble agent">壁紙と建具の状態が気になりますね。この2箇所を中心にご提案しましょうか？</div>
+      </div>
+    </div>
+
+    <!-- ② RAG カタログ参照 -->
+    <div class="panel" id="panel-1">
+      <div class="msg user">
+        <div class="avatar user">Y</div>
+        <div class="bubble user">床材、もう少し詳しく教えて</div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="card" style="max-width:82%;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            おすすめ床材（カタログ参照）
+          </div>
+          <div class="mat-item">
+            <div class="mat-thumb">IMG</div>
+            <div class="mat-info">
+              <div class="mat-maker">DAIKEN（大建工業）</div>
+              <div class="mat-name">銘木柄 ハピアフロア 銘樹</div>
+              <div class="mat-meta"><span>¥12,800〜/m²</span><span class="mat-case">施工実績 4件</span></div>
+            </div>
+          </div>
+          <div class="mat-item">
+            <div class="mat-thumb">IMG</div>
+            <div class="mat-info">
+              <div class="mat-maker">Panasonic（パナソニック）</div>
+              <div class="mat-name">アーティクリック45 オーク柄</div>
+              <div class="mat-meta"><span>¥9,600〜/m²</span><span class="mat-case">施工実績 2件</span></div>
+            </div>
+          </div>
+          <div class="mat-item">
+            <div class="mat-thumb">IMG</div>
+            <div class="mat-info">
+              <div class="mat-maker">TOTO</div>
+              <div class="mat-name">耐水フロア クオラス</div>
+              <div class="mat-meta"><span>¥14,200〜/m²</span><span class="mat-case">施工実績 1件</span></div>
+            </div>
+          </div>
+          <div class="rag-source">
+            <span>出典: メーカー公開カタログ（2026年版）</span>
+            <a href="#">詳細 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 見積AI + 工期 + 補助金 -->
+    <div class="panel" id="panel-2">
+      <div class="msg user">
+        <div class="avatar user">Y</div>
+        <div class="bubble user">概算を見る</div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="card" style="max-width:88%;width:88%;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            見積AI（費用・工期・補助金）
+          </div>
+          <div class="est-grid">
+            <div class="est-box">
+              <div class="est-box-label">概算費用</div>
+              <div class="est-box-val">98<small>〜142万円</small></div>
+            </div>
+            <div class="est-box">
+              <div class="est-box-label">概算工期</div>
+              <div class="est-box-val">2<small>〜3週間</small></div>
+            </div>
+          </div>
+          <div class="card-title" style="margin-bottom:8px;font-size:11.5px;">補助金候補</div>
+          <div class="subsidy-item">
+            <div><div class="subsidy-name">子育てエコホーム支援事業</div><div class="subsidy-name-sub">断熱窓・床の改修が対象</div></div>
+            <div class="subsidy-match">適合度 高</div>
+          </div>
+          <div class="subsidy-item">
+            <div><div class="subsidy-name">新座市 住宅リフォーム補助金</div><div class="subsidy-name-sub">要・工事着工前の申請</div></div>
+            <div class="subsidy-match">要確認</div>
+          </div>
+          <div class="est-note">※ 補助金は要件・予算枠により変動します。最終的な適用可否は自治体窓口にてご確認ください。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ CRM連携 -->
+    <div class="panel" id="panel-3">
+      <div class="msg user">
+        <div class="avatar user">Y</div>
+        <div class="bubble user">この内容で担当者に相談する</div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="card" style="max-width:88%;width:88%;">
+          <div class="crm-status">
+            <div class="crm-dot"></div>
+            <div class="crm-status-text">案件情報をCRMに登録しました</div>
+            <span class="crm-badge" style="margin-left:auto;">新規リード</span>
+          </div>
+          <div class="crm-row"><span class="crm-row-label">案件ID</span><span class="crm-row-val">RN-20260706-014</span></div>
+          <div class="crm-row"><span class="crm-row-label">希望箇所</span><span class="crm-row-val">リビング（床材・壁紙）</span></div>
+          <div class="crm-row"><span class="crm-row-label">概算金額</span><span class="crm-row-val">98〜142万円</span></div>
+          <div class="crm-row"><span class="crm-row-label">担当営業</span><span class="crm-row-val">自動アサイン待ち</span></div>
+          <div class="crm-row"><span class="crm-row-label">連絡先</span><span class="crm-row-val">LINE連携済み</span></div>
+          <button class="crm-btn">CRMで案件を確認する</button>
+        </div>
+      </div>
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="bubble agent">ありがとうございます！担当者より1営業日以内にご連絡いたします。</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="section-note">— UIの方向性確認用 —</div>
+</div>
+
+<script>
+function showTab(i, el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+i).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
