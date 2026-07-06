@@ -79,6 +79,25 @@ body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;colo
 .rag-source{margin-top:12px;font-size:10px;color:var(--muted);border-top:1px dashed var(--border);padding-top:9px;display:flex;justify-content:space-between;align-items:center;}
 .rag-source a{color:var(--gold);text-decoration:none;}
 
+/* RAG retrieval steps */
+.rag-steps{display:flex;flex-direction:column;gap:7px;margin-bottom:2px;}
+.rag-step{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);opacity:0;animation:rag-in .4s ease forwards;}
+.rag-step:nth-child(1){animation-delay:.15s;}
+.rag-step:nth-child(2){animation-delay:.6s;}
+.rag-step:nth-child(3){animation-delay:1.05s;}
+.rag-step:nth-child(4){animation-delay:1.5s;color:var(--gold);font-weight:500;}
+@keyframes rag-in{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+.rag-check{width:14px;height:14px;border-radius:50%;background:#eef5ee;color:var(--green);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
+.rag-count{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--gold);}
+
+.rag-divider{font-size:9.5px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin:14px 0 9px;padding-top:12px;border-top:1px dashed var(--border);}
+.snippet{background:var(--bg);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:11px;color:var(--text2);line-height:1.6;position:relative;}
+.snippet:last-of-type{margin-bottom:0;}
+.snippet-num{display:inline-flex;width:15px;height:15px;background:var(--gold);color:#fff;border-radius:4px;font-size:9px;align-items:center;justify-content:center;margin-right:6px;flex-shrink:0;vertical-align:middle;}
+.snippet-src{display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:var(--muted);}
+.snippet-rel{color:var(--gold);font-weight:500;}
+.cite{display:inline-flex;width:14px;height:14px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(160,120,56,0.25);border-radius:4px;font-size:8.5px;align-items:center;justify-content:center;margin-left:5px;vertical-align:middle;}
+
 /* ── 3. 見積+工期+補助金 ── */
 .est-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 .est-box{background:var(--bg);border-radius:8px;padding:11px;text-align:center;}
@@ -169,18 +188,49 @@ body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;colo
         <div class="avatar user">Y</div>
         <div class="bubble user">床材、もう少し詳しく教えて</div>
       </div>
+
+      <div class="msg agent">
+        <div class="avatar agent">R</div>
+        <div class="card" style="max-width:82%;">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            資料を検索しています
+          </div>
+          <div class="rag-steps">
+            <div class="rag-step"><span class="rag-check">✓</span>大建工業 商品カタログ（2026年版）</div>
+            <div class="rag-step"><span class="rag-check">✓</span>パナソニック 建材データベース</div>
+            <div class="rag-step"><span class="rag-check">✓</span>過去の施工実績ログ（127件）</div>
+            <div class="rag-step"><span class="rag-count">●</span>関連資料 3件がヒットしました</div>
+          </div>
+
+          <div class="rag-divider">参照した資料</div>
+          <div class="snippet">
+            <span class="snippet-num">1</span>「ハピアフロア 銘樹は表面強化シートにより耐傷性・耐水性に優れる」
+            <div class="snippet-src"><span>DAIKEN 2026年度カタログ p.42</span><span class="snippet-rel">関連度 96%</span></div>
+          </div>
+          <div class="snippet">
+            <span class="snippet-num">2</span>「国立市 田中様邸 リビング床材施工（2026/03）— 同グレード品採用」
+            <div class="snippet-src"><span>過去の施工実績ログ</span><span class="snippet-rel">関連度 88%</span></div>
+          </div>
+          <div class="snippet">
+            <span class="snippet-num">3</span>「アーティクリック45は水回りにも対応可能なクリック工法フロア」
+            <div class="snippet-src"><span>Panasonic 建材データベース</span><span class="snippet-rel">関連度 81%</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="msg agent">
         <div class="avatar agent">R</div>
         <div class="card" style="max-width:82%;">
           <div class="card-title">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            おすすめ床材（カタログ参照）
+            おすすめ床材
           </div>
           <div class="mat-item">
             <div class="mat-thumb">IMG</div>
             <div class="mat-info">
               <div class="mat-maker">DAIKEN（大建工業）</div>
-              <div class="mat-name">銘木柄 ハピアフロア 銘樹</div>
+              <div class="mat-name">銘木柄 ハピアフロア 銘樹<span class="cite">1</span><span class="cite">2</span></div>
               <div class="mat-meta"><span>¥12,800〜/m²</span><span class="mat-case">施工実績 4件</span></div>
             </div>
           </div>
@@ -188,7 +238,7 @@ body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;colo
             <div class="mat-thumb">IMG</div>
             <div class="mat-info">
               <div class="mat-maker">Panasonic（パナソニック）</div>
-              <div class="mat-name">アーティクリック45 オーク柄</div>
+              <div class="mat-name">アーティクリック45 オーク柄<span class="cite">3</span></div>
               <div class="mat-meta"><span>¥9,600〜/m²</span><span class="mat-case">施工実績 2件</span></div>
             </div>
           </div>
@@ -201,7 +251,7 @@ body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;colo
             </div>
           </div>
           <div class="rag-source">
-            <span>出典: メーカー公開カタログ（2026年版）</span>
+            <span>出典: 3件の資料（カタログ・実績ログ）</span>
             <a href="#">詳細 →</a>
           </div>
         </div>
