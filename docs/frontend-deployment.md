@@ -38,7 +38,7 @@ OpenAI APIキーやトークン秘密鍵はフロントエンド環境変数へ�
 3. `main` へpushし、Amplifyのビルドと公開結果を確認する。
 4. Amplifyの公開URLでチャット、画像アップロード、画像診断、相談受付を確認する。
 
-バックエンドを先に更新する場合は、GitHub Actionsの `PROD: Deploy backend to AWS (SAM)` を実行します。API URLまたはCognitoクライアントIDが変わった場合は、Amplifyの環境変数を更新して再デプロイします。
+バックエンドを先に更新する場合は、GitHub Actionsの `CI: Test and optionally deploy backend` を `deploy_aws=true` で実行します。デプロイ後に実API検証が行われます。API URLまたはCognitoクライアントIDが変わった場合は、Amplifyの環境変数を更新して再デプロイします。
 
 ## 本番デプロイのブランチ制限
 
@@ -46,4 +46,4 @@ OpenAI APIキーやトークン秘密鍵はフロントエンド環境変数へ�
 
 ## バックエンドだけを更新する場合
 
-`PROD: Deploy backend to AWS (SAM)` を手動実行すると、Lambda、API Gateway、DynamoDB、S3、Cognitoだけを更新します。フロントエンドはAmplifyのリポジトリ連携で管理されるため、バックエンド更新時にAWSへ同期する必要はありません。
+`CI: Test and optionally deploy backend` を手動実行すると、テスト成功後にLambda、API Gateway、DynamoDB、S3、Cognitoを更新し、デプロイ済みAPIとフロントエンドの接続を検証します。フロントエンドはAmplifyのリポジトリ連携で管理されるため、バックエンド更新時にAWSへ同期する必要はありません。

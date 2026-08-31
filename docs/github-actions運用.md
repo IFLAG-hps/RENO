@@ -43,13 +43,7 @@ frontend:
 
 LocalStack、SAM、React、PlaywrightのCIを実行します。AWSへの実デプロイは、手動実行で入力を明示的に有効化した場合だけ行います。
 
-### `deploy-backend.yml`
-
-`main` ブランチからAWS SAMでLambda、API Gateway、DynamoDB、S3、Cognitoを手動デプロイします。デプロイ後、出力されたAPI URLとCognitoクライアントIDをAmplifyの環境変数へ反映します。
-
-### `localstack-test.yml`
-
-他のWorkflowから呼び出す再利用可能なテストWorkflowです。単独では通常実行しません。
+`main-deploy.yml` は、CIに加えて、手動入力で本番デプロイを実行できます。デプロイ後は、CloudFormationの出力URLを使ったAPIスモークテストと、実APIを使うフロントエンドE2Eを実行します。
 
 ### `sync-fork.yml`
 
@@ -86,8 +80,8 @@ npm run test:e2e
 
 ### バックエンドを更新する場合
 
-1. `PROD: Deploy backend to AWS (SAM)` を手動実行する。
-2. `reno-mvp` の更新成功を確認する。
+1. `CI: Test and optionally deploy backend` を `deploy_aws=true` で手動実行する。
+2. `reno-mvp` の更新成功とデプロイ後の実API検証を確認する。
 3. API URLやCognitoクライアントIDが変わった場合はAmplifyの環境変数を更新し、再デプロイする。
 
 GitHub Pages用の `deploy-pages.yml` は `.github/workflows/` から移動し、[アーカイブ](archive/workflows/deploy-pages.yml) として保存しています。Actions画面には表示されません。
