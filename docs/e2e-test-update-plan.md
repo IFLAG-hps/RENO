@@ -252,3 +252,58 @@ CIでは、実行時間と失敗原因の分かりやすさを考慮して、次
 - `package.json`に単体テスト実行コマンドを追加し、CIでE2Eより前に実行する。
 - P0の単体・統合・E2Eが成功した状態を、段階導入時の最低リリース基準とする。
 
+## 13. CIテストワークフローの簡略化
+
+### 変更前
+
+```mermaid
+flowchart TD
+    A[GitHub Actions開始] --> B[Python設定]
+    B --> C[boto3をホストへインストール]
+    C --> D[LocalStackをDocker起動]
+    D --> E[LocalStackテスト]
+    E --> F[SAM validate/build]
+    F --> G[Node.js設定]
+    G --> H[npm ci]
+    H --> I[Playwrightをインストール]
+    I --> J[API用Docker起動]
+    J --> K[API用Docker内でboto3を再インストール]
+    K --> L[Reactビルド]
+    L --> M[E2E実行]
+```
+
+### 変更後
+
+```mermaid
+flowchart TD
+    A[GitHub Actions開始] --> B[Python設定 + pipキャッシュ]
+    B --> C[requirements-test.txtから依存導入]
+    C --> D[LocalStackをDocker起動]
+    D --> E[LocalStackテスト]
+    E --> F[SAM validate/build]
+    F --> G[Node.js設定 + npmキャッシュ]
+    G --> H[npm ci<br/>キャッシュ優先]
+    H --> I[Playwrightブラウザキャッシュ確認]
+    I --> J[APIをCIホスト上で直接起動]
+    J --> K[ヘルスチェック]
+    K --> L[Reactビルド + E2E実行]
+```
+
+### 短縮した箇所
+
+```text
+依存関係       毎回ダウンロード
+      ↓
+pip/npm/Playwrightキャッシュを再利用
+
+API起動        Python用Docker起動
+      ↓
+CIホスト上で直接起動
+
+boto3          ホストとAPIコンテナで二重導入
+      ↓
+ホスト側で一度だけ導入
+```
+
+初回実行ではキャッシュを作成するため短縮効果は限定的だが、2回目以降は依存関係のダウンロード量とAPI起動処理が減る。テストの順序と、LocalStack・SAM・E2Eを成功条件にするガードレールは維持する。
+
