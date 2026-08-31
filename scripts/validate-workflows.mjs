@@ -2,9 +2,7 @@ import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const files = {
-  backend: '.github/workflows/deploy-backend.yml',
   main: '.github/workflows/main-deploy.yml',
-  localstack: '.github/workflows/localstack-test.yml',
   sync: '.github/workflows/sync-fork.yml'
 };
 
@@ -13,15 +11,11 @@ for (const [name, file] of Object.entries(files)) {
   workflows[name] = await readFile(file, 'utf8');
 }
 
-for (const name of ['backend']) {
-  assert.match(workflows[name], /if: github\.ref == 'refs\/heads\/main'/, `${name}: main branch restriction is missing`);
-  assert.match(workflows[name], /uses: \.\/\.github\/workflows\/localstack-test\.yml/, `${name}: LocalStack test is missing`);
-  assert.match(workflows[name], /needs: localstack-test/, `${name}: test dependency is missing`);
-}
-
 assert.match(workflows.main, /github\.ref == 'refs\/heads\/main'/, 'main-deploy: main branch restriction is missing');
-assert.match(workflows.localstack, /workflow_call:/, 'LocalStack workflow_call is missing');
-assert.match(workflows.backend, /OPENAI_API_KEY: \$\{\{ secrets\.OPENAI_API_KEY \}\}/, 'backend OpenAI key configuration is missing');
+assert.match(workflows.main, /LocalStack tests/, 'main-deploy: LocalStack test is missing');
+assert.match(workflows.main, /Smoke-test deployed API/, 'main-deploy: deployed API smoke test is missing');
+assert.match(workflows.main, /Run frontend E2E against deployed API/, 'main-deploy: deployed frontend E2E is missing');
+assert.match(workflows.main, /OPENAI_API_KEY: \$\{\{ secrets\.OPENAI_API_KEY \}\}/, 'main-deploy: OpenAI key configuration is missing');
 assert.match(workflows.sync, /workflow_run:/, 'fork sync workflow trigger is missing');
 assert.match(workflows.sync, /github\.event\.workflow_run\.conclusion == 'success'/, 'fork sync success gate is missing');
 assert.match(workflows.sync, /github\.repository == 'IFLAG-hps\/RENO'/, 'fork sync source repository guard is missing');
