@@ -163,6 +163,41 @@ class LocalStackHandlerTest(unittest.TestCase):
             else:
                 os.environ["OPENAI_API_KEY"] = previous_key
 
+    def test_catalog_ocr_response_is_sanitized_before_save(self):
+        parsed = self.handler.parse_catalog_response(json.dumps({
+            "items": [{
+                "name": "フロアタイル 1000", "manufacturer": "RENO建材", "product_code": "FT-1000",
+                "category": "床材", "price": "5,000円", "unit": "㎡", "description": "耐水性のある床材",
+                "specifications": {"厚さ": "3mm"}, "source_pages": [2, 2, 0, "3"], "untrusted": "must not be stored",
+            }, {"name": ""}], "notes": "価格は税別",
+        }, ensure_ascii=False), "catalog-sources/source.pdf")
+        self.assertNotIn("error", parsed)
+        self.assertEqual(len(parsed["items"]), 1)
+        item = parsed["items"][0]
+        self.assertEqual(item["name"], "フロアタイル 1000")
+        self.assertEqual(item["source_pages"], [2])
+        self.assertNotIn("untrusted", item)
+
+    def test_catalog_save_requires_admin_and_persists_items(self):
+        source_key = "catalog-sources/test.pdf"
+        guest = self.handler.token_for("catalog-guest")
+        denied = self.handler.lambda_handler({"body": json.dumps({
+            "type": "save_catalog_items", "token": guest, "source_key": source_key,
+            "items": [{"name": "保存されない商品"}],
+        }, ensure_ascii=False)}, None)
+        self.assertEqual(denied["statusCode"], 403)
+
+        admin = self.handler.token_for("catalog-admin", "admin")
+        saved = self.handler.lambda_handler({"body": json.dumps({
+            "type": "save_catalog_items", "token": admin, "source_key": source_key,
+            "items": [{"name": "保存される商品", "source_pages": [1]}],
+        }, ensure_ascii=False)}, None)
+        self.assertEqual(saved["statusCode"], 200)
+        item_id = json.loads(saved["body"])["items"][0]["id"]
+        listed = self.handler.lambda_handler({"body": json.dumps({"type": "get_catalog_items", "token": guest}, ensure_ascii=False)}, None)
+        self.assertEqual(listed["statusCode"], 200)
+        self.assertIn(item_id, [item["id"] for item in json.loads(listed["body"])])
+
     def test_generated_tokens_are_stable(self):
         for index in range(100):
             token = self.handler.token_for(f"token-roundtrip-{index}")

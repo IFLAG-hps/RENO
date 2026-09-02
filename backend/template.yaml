@@ -5,7 +5,7 @@ Description: RENO MVP API without SQS
 Globals:
   Function:
     Runtime: python3.12
-    Timeout: 28
+    Timeout: 60
     MemorySize: 512
     Environment:
       Variables:

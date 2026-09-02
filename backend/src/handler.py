@@ -18,6 +18,8 @@ MAX_INPUT_MESSAGES = 20
 MAX_MESSAGE_CHARS = 4000
 MAX_SYSTEM_CHARS = 8000
 MAX_OUTPUT_TOKENS = 500
+MAX_CATALOG_PDF_BYTES = 15 * 1024 * 1024
+MAX_CATALOG_ITEMS_PER_IMPORT = 100
 
 ESTIMATE_SIZES = {"6": 10, "8": 13, "10": 16, "12": 20}
 ESTIMATE_ITEMS = {
@@ -92,6 +94,91 @@ def usage(user):
 def safe_filename(name):
     name = posixpath.basename(str(name or "image.jpg")).replace("\\", "_")
     return "".join(c for c in name if c.isalnum() or c in "._-")[:120] or "image.jpg"
+
+
+def catalog_item_from_candidate(candidate, source_key):
+    """Keep only catalog fields that the extraction model explicitly returned."""
+    if not isinstance(candidate, dict):
+        return None
+    name = str(candidate.get("name", "")).strip()
+    if not name:
+        return None
+    source_pages = candidate.get("source_pages", [])
+    if not isinstance(source_pages, list):
+        source_pages = []
+    pages = sorted({int(page) for page in source_pages if isinstance(page, int) and page > 0})[:30]
+    return {
+        "id": str(uuid.uuid4()),
+        "name": name[:160],
+        "manufacturer": str(candidate.get("manufacturer", "")).strip()[:120],
+        "product_code": str(candidate.get("product_code", "")).strip()[:120],
+        "category": str(candidate.get("category", "")).strip()[:80],
+        "price": str(candidate.get("price", "")).strip()[:120],
+        "unit": str(candidate.get("unit", "")).strip()[:40],
+        "description": str(candidate.get("description", "")).strip()[:1000],
+        "specifications": {str(key)[:80]: str(value)[:240] for key, value in candidate.get("specifications", {}).items()} if isinstance(candidate.get("specifications"), dict) else {},
+        "source_pages": pages,
+        "source_key": source_key,
+    }
+
+
+def parse_catalog_response(text, source_key):
+    """Validate a model response before it can be shown or saved as catalog data."""
+    raw = str(text or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"error": "OCR結果を読み取れませんでした。PDFを分割するか、もう一度お試しください。"}
+    candidates = payload.get("items", []) if isinstance(payload, dict) else []
+    if not isinstance(candidates, list):
+        return {"error": "OCR結果の形式が不正です。"}
+    items = [item for item in (catalog_item_from_candidate(value, source_key) for value in candidates[:MAX_CATALOG_ITEMS_PER_IMPORT]) if item]
+    return {"items": items, "notes": str(payload.get("notes", "")).strip()[:1000] if isinstance(payload, dict) else ""}
+
+
+def extract_catalog_from_pdf(body):
+    source_key = str(body.get("source_key", ""))
+    if not source_key.startswith("catalog-sources/") or not source_key.lower().endswith(".pdf"):
+        return {"error": "invalid catalog PDF key"}
+    try:
+        obj = S3.get_object(Bucket=os.environ["ASSET_BUCKET"], Key=source_key)
+        content_type = str(obj.get("ContentType", "")).split(";", 1)[0].lower()
+        if content_type and content_type != "application/pdf":
+            return {"error": "source file is not a PDF"}
+        pdf = obj["Body"].read(MAX_CATALOG_PDF_BYTES + 1)
+    except Exception:
+        return {"error": "catalog PDF not found"}
+    if not pdf.startswith(b"%PDF"):
+        return {"error": "source file is not a PDF"}
+    if len(pdf) > MAX_CATALOG_PDF_BYTES:
+        return {"error": "catalog PDF is too large (maximum 15 MB)"}
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return {"error": "OCR service is not configured"}
+    prompt = (
+        "このPDFカタログから掲載されている商品だけを抽出してください。画像内の文字も読み取ってください。"
+        "推測や補完はせず、読み取れない値は空文字にしてください。各商品に根拠となるPDFページ番号を必ず付けてください。"
+        "次のJSONだけを返してください。"
+        '{"items":[{"name":"","manufacturer":"","product_code":"","category":"","price":"","unit":"","description":"","specifications":{},"source_pages":[1]}],"notes":""}'
+    )
+    request = Request("https://api.openai.com/v1/responses", data=json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "input": [{"role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_file", "filename": safe_filename(source_key), "file_data": base64.b64encode(pdf).decode()},
+        ]}],
+        "max_output_tokens": 6000,
+        "store": False,
+    }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=27) as result:
+            payload = json.loads(result.read())
+        text = payload.get("output_text", "")
+        return parse_catalog_response(text, source_key)
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, ValueError):
+        return {"error": "OCR service is temporarily unavailable"}
 
 
 def chat(body, user):
@@ -330,8 +417,45 @@ def lambda_handler(event, context):
             key = f"uploads/{user['sub']}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
             return response(200, {"key": key, "upload_url": url, "expires_in": 900})
+        if typ == "create_catalog_upload_url":
+            if user.get("role") != "admin": return response(403, {"error": "admin only"})
+            filename = safe_filename(body.get("filename"))
+            if not filename.lower().endswith(".pdf"): return response(400, {"error": "catalog source must be a PDF"})
+            key = f"catalog-sources/{uuid.uuid4().hex}-{filename}"
+            url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": "application/pdf"}, ExpiresIn=900)
+            return response(200, {"key": key, "upload_url": url, "expires_in": 900})
+        if typ == "extract_catalog_from_pdf":
+            if user.get("role") != "admin": return response(403, {"error": "admin only"})
+            result = extract_catalog_from_pdf(body)
+            status = 503 if result.get("error") in ("OCR service is not configured", "OCR service is temporarily unavailable") else 400 if "error" in result else 200
+            return response(status, result)
+        if typ == "save_catalog_items":
+            if user.get("role") != "admin": return response(403, {"error": "admin only"})
+            source_key = str(body.get("source_key", ""))
+            candidates = body.get("items", [])
+            if not source_key.startswith("catalog-sources/") or not isinstance(candidates, list):
+                return response(400, {"error": "invalid catalog items"})
+            items = [item for item in (catalog_item_from_candidate(value, source_key) for value in candidates[:MAX_CATALOG_ITEMS_PER_IMPORT]) if item]
+            if not items: return response(400, {"error": "at least one catalog item with a name is required"})
+            now = int(time.time())
+            for item in items:
+                item.update({"pk": "CATALOG", "sk": "ITEM#" + item["id"], "created_at": now, "updated_at": now, "created_by": user["sub"]})
+                save(item)
+            return response(200, {"items": items})
+        if typ == "get_catalog_items":
+            category = str(body.get("category", "")).strip()
+            items = TABLE.query(KeyConditionExpression=Key("pk").eq("CATALOG") & Key("sk").begins_with("ITEM#"), ScanIndexForward=False).get("Items", [])
+            return response(200, [item for item in items if not category or item.get("category") == category])
+        if typ == "delete_catalog_item":
+            if user.get("role") != "admin": return response(403, {"error": "admin only"})
+            item_id = str(body.get("id", ""))
+            item = TABLE.get_item(Key={"pk": "CATALOG", "sk": "ITEM#" + item_id}).get("Item")
+            if not item: return response(404, {"error": "catalog item not found"})
+            TABLE.delete_item(Key={"pk": "CATALOG", "sk": "ITEM#" + item_id})
+            return response(200, {"ok": True})
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
+            if user.get("role") == "admin": allowed += ("catalog-sources/",)
             if not key.startswith(allowed): return response(403, {"error": "forbidden"})
             url = S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
             return response(200, {"download_url": url, "expires_in": 900})
