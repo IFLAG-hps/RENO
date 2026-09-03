@@ -1405,6 +1405,7 @@ async function useSampleImage(idx, prompt = window._pendingUploadPrompt || '') {
     window._beforeFile = file;
     window._beforeURL = beforeURL;
     window._genPrompt = prompt;
+    await persistPhotoUpload(file);
   } catch(e) {
     window._beforeFile = null;
     window._beforeURL = beforeURL;
@@ -1417,6 +1418,12 @@ async function useSampleImage(idx, prompt = window._pendingUploadPrompt || '') {
 async function handlePhoto(event, prompt = window._pendingUploadPrompt || '') {
   const file = event.target.files[0];
   if (!file) return;
+  try {
+    await persistPhotoUpload(file);
+  } catch (e) {
+    alert('写真の保存に失敗しました: ' + e.message);
+    return;
+  }
   const beforeURL = URL.createObjectURL(file);
 
   const card = document.getElementById('upload-msg');
@@ -2941,6 +2948,7 @@ function closeMenuOuter(e) {
 // ── Cases Panel ──
 let casesTab = 'upload';
 let caseImgData = '';
+let caseImgFile = null;
 
 function openCasesPanel() {
   document.getElementById('casesPanel').classList.add('open');
@@ -3004,6 +3012,7 @@ function renderUploadForm() {
 function previewCaseImg(e) {
   const file = e.target.files[0];
   if (!file) return;
+  caseImgFile = file;
   const reader = new FileReader();
   reader.onload = (ev) => {
     caseImgData = ev.target.result;
@@ -3025,13 +3034,23 @@ async function submitCase() {
   btn.disabled = true; btn.textContent = '登録中...';
 
   try {
+    let imageKey = '';
+    if (caseImgFile && EDGE_URL) {
+      const presignRes = await fetch(EDGE_URL, { method: 'POST', headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken, type: 'create_upload_url', filename: caseImgFile.name, content_type: caseImgFile.type }) });
+      const presign = await presignRes.json();
+      if (!presignRes.ok) throw new Error(presign.error || '画像アップロードの準備に失敗しました');
+      const put = await fetch(presign.upload_url, { method: 'PUT', headers: { 'Content-Type': presign.content_type }, body: caseImgFile });
+      if (!put.ok) throw new Error('画像をS3へアップロードできませんでした');
+      imageKey = presign.key;
+    }
     const res = await fetch(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token: sessionToken, type: 'save_case',
         title, room, style, budget_range: budget,
-        description: desc, image_data: caseImgData,
+        description: desc, image_key: imageKey,
       })
     });
     if (!res.ok) {
@@ -3043,6 +3062,7 @@ async function submitCase() {
     setTimeout(() => { msg.style.display = 'none'; }, 2000);
     // Reset form
     caseImgData = '';
+    caseImgFile = null;
     renderUploadForm();
   } catch(e) {
     alert('登録に失敗しました: ' + e.message);
@@ -3065,7 +3085,7 @@ async function renderCasesList() {
       return;
     }
     document.getElementById('casesBody').innerHTML = data.map(c => {
-      const imageSrc = safeImageSrc(c.image_data);
+      const imageSrc = safeImageSrc(c.image_url || c.image_data);
       const encodedId = encodeURIComponent(String(c.id || ''));
       return `<div class="case-list-item">
         ${imageSrc ? `<img class="case-list-img" src="${escapeHTML(imageSrc)}" alt="">` : `<div class="case-list-img" style="display:flex;align-items:center;justify-content:center;color:#2a2a2a;font-size:10px;">NO IMG</div>`}
@@ -3123,7 +3143,7 @@ async function showCases(room, style) {
         <div class="bubble agent">まだ施工事例が登録されていません。<br>担当者に直接お問い合わせください。</div>`;
     } else {
       const cards = data.map(c => {
-        const imageSrc = safeImageSrc(c.image_data);
+        const imageSrc = safeImageSrc(c.image_url || c.image_data);
         return `<div class="case-chat-card">
           ${imageSrc ? `<img class="case-chat-img" src="${escapeHTML(imageSrc)}" alt="">` : `<div class="case-chat-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:10px;">NO IMAGE</div>`}
           <div class="case-chat-body">
@@ -3220,6 +3240,22 @@ async function openHistoryPanel() {
   } catch(e) {
     list.innerHTML = `<div class="history-empty">読み込みに失敗しました。<br>${escapeHTML(e.message)}</div>`;
   }
+}
+
+async function persistPhotoUpload(file) {
+  if (!EDGE_URL || !sessionToken || !file) return;
+  const sessionId = await ensureSession();
+  const presignRes = await fetchWithTimeout(EDGE_URL, { method: 'POST', headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: sessionToken, type: 'create_upload_url', sessionId, filename: file.name, content_type: file.type }) });
+  const presign = await presignRes.json();
+  if (!presignRes.ok) throw new Error(presign.error || '写真のアップロードURLを取得できませんでした');
+  const put = await fetchWithTimeout(presign.upload_url, { method: 'PUT', headers: { 'Content-Type': presign.content_type }, body: file }, 60000);
+  if (!put.ok) throw new Error('写真をS3へアップロードできませんでした');
+  const savedRes = await fetchWithTimeout(EDGE_URL, { method: 'POST', headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: sessionToken, type: 'save_photo', sessionId, key: presign.key, filename: file.name, content_type: file.type }) });
+  const saved = await savedRes.json();
+  if (!savedRes.ok) throw new Error(saved.error || '写真と相談履歴を紐付けできませんでした');
+  window._lastPhoto = saved.photo;
 }
 
 async function resumeSession(sessionId) {

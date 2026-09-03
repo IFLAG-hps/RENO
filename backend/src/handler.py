@@ -143,7 +143,10 @@ def get_session_detail(user, session_id):
         ScanIndexForward=True,
     )
     messages = [{"role": message.get("role"), "content": message.get("content", "")} for message in result.get("Items", [])]
-    return {**public_session(item), "messages": messages}
+    photos = [photo for photo in query_user(user, "PHOTO#") if photo.get("session_id") == session_id]
+    for photo in photos:
+        photo["download_url"] = signed_download_url(photo["s3_key"])
+    return {**public_session(item), "messages": messages, "photos": photos}
 
 
 def save_chat_turn(user, session_id, user_message, assistant_message):
@@ -184,6 +187,37 @@ def usage(user):
 def safe_filename(name):
     name = posixpath.basename(str(name or "image.jpg")).replace("\\", "_")
     return "".join(c for c in name if c.isalnum() or c in "._-")[:120] or "image.jpg"
+
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def owned_upload_key(user, key):
+    return isinstance(key, str) and key.startswith(f"uploads/{user['sub']}/")
+
+
+def signed_download_url(key):
+    return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
+
+
+def attach_photo(user, session_id, key, filename, content_type):
+    if not session_id or not session_item(user, session_id): return None, "session not found"
+    if not owned_upload_key(user, key): return None, "forbidden"
+    content_type = str(content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_TYPES: return None, "unsupported content type"
+    try:
+        metadata = S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return None, "uploaded object not found"
+    now, photo_id = int(time.time()), str(uuid.uuid4())
+    item = {"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id, "id": photo_id, "session_id": session_id,
+            "s3_key": key, "filename": safe_filename(filename), "content_type": content_type,
+            "size": int(metadata.get("ContentLength", 0)), "created_at": now, "schema_version": 1}
+    save(item)
+    TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)},
+                      UpdateExpression="SET photo_ids = list_append(if_not_exists(photo_ids, :empty), :photo), updated_at = :now",
+                      ExpressionAttributeValues={":empty": [], ":photo": [photo_id], ":now": now})
+    return {"id": photo_id, "sessionId": session_id, "key": key, "downloadUrl": signed_download_url(key)}, None
 
 
 def chat(body, user, session_id):
@@ -458,15 +492,23 @@ def lambda_handler(event, context):
             save({"pk": "USER#" + user["sub"], "sk": "SESSION#" + str(time.time_ns()), "data": body.get("data", {}), "created_at": int(time.time())})
             return response(200, {"ok": True})
         if typ == "create_upload_url":
-            content_type = str(body.get("content_type", "image/jpeg"))
-            if content_type not in ("image/jpeg", "image/png", "image/webp", "application/pdf"): return response(400, {"error": "unsupported content type"})
-            key = f"uploads/{user['sub']}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
+            content_type = str(body.get("content_type", "image/jpeg")).lower()
+            if content_type not in ALLOWED_IMAGE_TYPES | {"application/pdf"}: return response(400, {"error": "unsupported content type"})
+            session_id = str(body.get("sessionId", "")).strip()
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            key = f"uploads/{user['sub']}/{session_id or 'unattached'}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
-            return response(200, {"key": key, "upload_url": url, "expires_in": 900})
+            return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "save_photo":
+            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"))
+            if error == "session not found": return response(404, {"error": error})
+            if error == "forbidden": return response(403, {"error": error})
+            if error: return response(400, {"error": error})
+            return response(201, {"photo": photo})
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
             if not key.startswith(allowed): return response(403, {"error": "forbidden"})
-            url = S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
+            url = signed_download_url(key)
             return response(200, {"download_url": url, "expires_in": 900})
         if typ == "create_guest_pin":
             if user.get("role") != "admin": return response(403, {"error": "admin only"})
@@ -485,17 +527,25 @@ def lambda_handler(event, context):
         if typ == "save_case":
             title, room = str(body.get("title", "")).strip(), str(body.get("room", "")).strip()
             if not title or not room: return response(400, {"error": "title and room are required"})
-            image = str(body.get("image_data", ""))
+            image_key = str(body.get("image_key", "")).strip()
+            if image_key and not owned_upload_key(user, image_key): return response(403, {"error": "forbidden image key"})
+            image = "" if image_key else str(body.get("image_data", ""))
             if len(image) > 700_000: return response(413, {"error": "image is too large"})
-            item = {"pk": "USER#" + user["sub"], "sk": "CASE#" + str(uuid.uuid4()), "id": str(uuid.uuid4()), "title": title[:120], "room": room[:80], "style": str(body.get("style", ""))[:80], "budget_range": str(body.get("budget_range", ""))[:80], "description": str(body.get("description", ""))[:1000], "image_data": image, "created_at": int(time.time())}
+            item = {"pk": "USER#" + user["sub"], "sk": "CASE#" + str(uuid.uuid4()), "id": str(uuid.uuid4()), "title": title[:120], "room": room[:80], "style": str(body.get("style", ""))[:80], "budget_range": str(body.get("budget_range", ""))[:80], "description": str(body.get("description", ""))[:1000], "image_data": image, "image_key": image_key, "created_at": int(time.time())}
             save(item); return response(200, {"ok": True, "case": item})
         if typ == "get_cases":
             room, style = str(body.get("room", "")), str(body.get("style", "")); items = query_user(user, "CASE#")
-            return response(200, [i for i in items if (not room or i.get("room") == room) and (not style or i.get("style") == style)])
+            result = [i for i in items if (not room or i.get("room") == room) and (not style or i.get("style") == style)]
+            for item in result:
+                if item.get("image_key"): item["image_url"] = signed_download_url(item["image_key"])
+            return response(200, result)
         if typ == "delete_case":
             items = [i for i in query_user(user, "CASE#") if i.get("id") == str(body.get("id", ""))]
             if not items: return response(404, {"error": "case not found"})
-            TABLE.delete_item(Key={"pk": items[0]["pk"], "sk": items[0]["sk"]}); return response(200, {"ok": True})
+            item = items[0]
+            TABLE.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+            if item.get("image_key"): S3.delete_object(Bucket=os.environ["ASSET_BUCKET"], Key=item["image_key"])
+            return response(200, {"ok": True})
         if typ == "handoff":
             if os.environ.get("SES_FROM_EMAIL") and os.environ.get("SES_TO_EMAIL"):
                 SES.send_email(Source=os.environ["SES_FROM_EMAIL"], Destination={"ToAddresses": [os.environ["SES_TO_EMAIL"]]}, Message={"Subject": {"Data": "RENO相談受付"}, "Body": {"Text": {"Data": json.dumps(body.get("data", {}), ensure_ascii=False)}}})
