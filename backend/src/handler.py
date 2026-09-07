@@ -190,6 +190,7 @@ def safe_filename(name):
 
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_ROOM_TYPES = {"リビング", "キッチン", "浴室・洗面所", "寝室", "玄関"}
 
 
 def owned_upload_key(user, key):
@@ -200,7 +201,7 @@ def signed_download_url(key):
     return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
 
 
-def attach_photo(user, session_id, key, filename, content_type):
+def attach_photo(user, session_id, key, filename, content_type, room_type=""):
     if not session_id or not session_item(user, session_id): return None, "session not found"
     if not owned_upload_key(user, key): return None, "forbidden"
     content_type = str(content_type or "").lower()
@@ -210,14 +211,127 @@ def attach_photo(user, session_id, key, filename, content_type):
     except Exception:
         return None, "uploaded object not found"
     now, photo_id = int(time.time()), str(uuid.uuid4())
+    room_type = str(room_type or "").strip()
+    if room_type not in ALLOWED_ROOM_TYPES: room_type = ""
     item = {"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id, "id": photo_id, "session_id": session_id,
             "s3_key": key, "filename": safe_filename(filename), "content_type": content_type,
             "size": int(metadata.get("ContentLength", 0)), "created_at": now, "schema_version": 1}
+    if room_type: item["room_type"] = room_type
     save(item)
+    if room_type:
+        TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)}, UpdateExpression="SET room_type = :room_type, updated_at = :now", ExpressionAttributeValues={":room_type": room_type, ":now": now})
     TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)},
                       UpdateExpression="SET photo_ids = list_append(if_not_exists(photo_ids, :empty), :photo), updated_at = :now",
                       ExpressionAttributeValues={":empty": [], ":photo": [photo_id], ":now": now})
     return {"id": photo_id, "sessionId": session_id, "key": key, "downloadUrl": signed_download_url(key)}, None
+
+
+def analyze_photo(body, user):
+    """S3上の写真をOpenAIへ渡し、リフォーム向けの状態診断を返す。"""
+    key = str(body.get("key", "")).strip()
+    session_id = str(body.get("sessionId", "")).strip()
+    photo_id = str(body.get("photoId", "")).strip()
+    focus = str(body.get("focus", "")).strip()[:1000]
+    if not key or not owned_upload_key(user, key):
+        return {"error": "forbidden photo key"}
+    if session_id and not session_item(user, session_id):
+        return {"error": "session not found"}
+    try:
+        S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return {"error": "uploaded object not found"}
+
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return {"error": "AI service is not configured"}
+
+    image_url = signed_download_url(key)
+    prompt = (
+        "あなたはリフォーム相談の画像確認アシスタントです。添付画像を目視し、劣化していそうな箇所を大まかに推定してください。"
+        "これは正式な建物診断ではありません。画像から確認できる範囲だけを扱い、原因・経過年数・安全性を断定しないでください。"
+        "ユーザーの確認希望がある場合は、その意図を優先し、画像に写っていない対象は無理に判定しないでください。"
+        f"ユーザーの確認希望: {focus or '特になし。画像全体を確認してください。'}"
+        "次のJSONだけを返してください。"
+        '{"items":[{"name":"壁紙（クロス）","finding":"状態の説明","severity":"軽度|中度|重度"}],'
+        '"summary":"気になる箇所の短いまとめ"}'
+        "itemsには画像から気になる部材を最大5件含めてください。severityは劣化の可能性の目安です。"
+    )
+    request = Request("https://api.openai.com/v1/responses", data=json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "input": [{"role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_image", "image_url": image_url, "detail": "high"},
+        ]}],
+        "max_output_tokens": 600,
+        "store": False,
+    }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=30) as result:
+            payload = json.loads(result.read())
+        raw = payload.get("output_text", "")
+        match = raw[raw.find("{"):raw.rfind("}") + 1]
+        result_data = json.loads(match) if match else {}
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        print(json.dumps({"openai_analysis_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+
+    items = []
+    for item in result_data.get("items", []) if isinstance(result_data.get("items"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:80]
+        finding = str(item.get("finding", "")).strip()[:300]
+        severity = str(item.get("severity", "")).strip()
+        if name and finding and severity in {"軽度", "中度", "重度"}:
+            items.append({"name": name, "finding": finding, "severity": severity})
+    if not items:
+        return {"error": "AI analysis returned no valid result"}
+    analysis = {"items": items[:5], "summary": str(result_data.get("summary", "")).strip()[:400], "focus": focus, "source": "ai"}
+
+    if photo_id and session_id:
+        TABLE.update_item(
+            Key={"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id},
+            UpdateExpression="SET analysis = :analysis, analyzed_at = :now",
+            ExpressionAttributeValues={":analysis": analysis, ":now": int(time.time())},
+        )
+    return {"sessionId": session_id, "photoId": photo_id, "analysis": analysis}
+
+
+def diagnosis_chat(body, user):
+    """同じ写真を見ながら、ユーザーの追加質問に回答する。"""
+    key = str(body.get("key", "")).strip()
+    question = str(body.get("question", "")).strip()[:1000]
+    messages = body.get("messages", [])
+    if not key or not owned_upload_key(user, key): return {"error": "forbidden photo key"}
+    if not question: return {"error": "question is required"}
+    try:
+        S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return {"error": "uploaded object not found"}
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key: return {"error": "AI service is not configured"}
+    history_messages = []
+    if isinstance(messages, list):
+        history_messages = [{"role": m.get("role"), "content": str(m.get("content", ""))[:2000]} for m in messages[-8:] if isinstance(m, dict) and m.get("role") in {"user", "assistant"}]
+    prompt = "同じ写真についての追加質問に答えてください。画像から確認できる範囲に限定し、原因・経過年数・安全性を断定せず、必要なら現地確認を案内してください。"
+    input_content = [{"type": "input_text", "text": prompt}]
+    input_content.append({"type": "input_image", "image_url": signed_download_url(key), "detail": "high"})
+    input_messages = history_messages + [{"role": "user", "content": question}]
+    request = Request("https://api.openai.com/v1/responses", data=json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "input": [{"role": "system", "content": prompt}, *input_messages[:-1], {"role": "user", "content": input_content}],
+        "max_output_tokens": 500,
+        "store": False,
+    }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=30) as result:
+            payload = json.loads(result.read())
+        answer = payload.get("output_text", "") or "".join(part.get("text", "") for item in payload.get("output", []) for part in item.get("content", []) if part.get("type") == "output_text")
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        print(json.dumps({"openai_diagnosis_chat_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    if not answer.strip(): return {"error": "AI returned an empty answer"}
+    return {"answer": answer.strip(), "source": "ai"}
 
 
 def chat(body, user, session_id):
@@ -500,11 +614,19 @@ def lambda_handler(event, context):
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
             return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
         if typ == "save_photo":
-            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"))
+            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"), body.get("room_type", ""))
             if error == "session not found": return response(404, {"error": error})
             if error == "forbidden": return response(403, {"error": error})
             if error: return response(400, {"error": error})
             return response(201, {"photo": photo})
+        if typ == "analyze_photo":
+            result = analyze_photo(body, user)
+            status = 200 if "error" not in result else (404 if result["error"] in {"session not found", "uploaded object not found"} else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
+        if typ == "diagnosis_chat":
+            result = diagnosis_chat(body, user)
+            status = 200 if "error" not in result else (400 if result["error"] == "question is required" else 404 if result["error"] == "uploaded object not found" else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
             if not key.startswith(allowed): return response(403, {"error": "forbidden"})
