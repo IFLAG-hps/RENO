@@ -201,6 +201,13 @@ def signed_download_url(key):
     return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
 
 
+def image_data_url(key):
+    obj = S3.get_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    content_type = obj.get("ContentType", "image/jpeg")
+    image_bytes = obj["Body"].read()
+    return f"data:{content_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+
+
 def attach_photo(user, session_id, key, filename, content_type, room_type=""):
     if not session_id or not session_item(user, session_id): return None, "session not found"
     if not owned_upload_key(user, key): return None, "forbidden"
@@ -245,7 +252,11 @@ def analyze_photo(body, user):
     if not api_key:
         return {"error": "AI service is not configured"}
 
-    image_url = signed_download_url(key)
+    try:
+        image_url = image_data_url(key)
+    except Exception as exc:
+        print(json.dumps({"s3_analysis_error": str(exc)}, ensure_ascii=False))
+        return {"error": "uploaded object could not be read"}
     prompt = (
         "あなたはリフォーム相談の画像確認アシスタントです。添付画像を目視し、劣化していそうな箇所を大まかに推定してください。"
         "これは正式な建物診断ではありません。画像から確認できる範囲だけを扱い、原因・経過年数・安全性を断定しないでください。"
@@ -271,7 +282,11 @@ def analyze_photo(body, user):
         raw = payload.get("output_text", "")
         match = raw[raw.find("{"):raw.rfind("}") + 1]
         result_data = json.loads(match) if match else {}
-    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:2000]
+        print(json.dumps({"openai_analysis_error": f"HTTP {exc.code}", "detail": detail}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
         print(json.dumps({"openai_analysis_error": str(exc)}, ensure_ascii=False))
         return {"error": "AI service is temporarily unavailable"}
 
@@ -315,7 +330,11 @@ def diagnosis_chat(body, user):
         history_messages = [{"role": m.get("role"), "content": str(m.get("content", ""))[:2000]} for m in messages[-8:] if isinstance(m, dict) and m.get("role") in {"user", "assistant"}]
     prompt = "同じ写真についての追加質問に答えてください。画像から確認できる範囲に限定し、原因・経過年数・安全性を断定せず、必要なら現地確認を案内してください。"
     input_content = [{"type": "input_text", "text": prompt}]
-    input_content.append({"type": "input_image", "image_url": signed_download_url(key), "detail": "high"})
+    try:
+        input_content.append({"type": "input_image", "image_url": image_data_url(key), "detail": "auto"})
+    except Exception as exc:
+        print(json.dumps({"s3_diagnosis_chat_error": str(exc)}, ensure_ascii=False))
+        return {"error": "uploaded object could not be read"}
     input_messages = history_messages + [{"role": "user", "content": question}]
     request = Request("https://api.openai.com/v1/responses", data=json.dumps({
         "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
@@ -327,7 +346,11 @@ def diagnosis_chat(body, user):
         with urlopen(request, timeout=30) as result:
             payload = json.loads(result.read())
         answer = payload.get("output_text", "") or "".join(part.get("text", "") for item in payload.get("output", []) for part in item.get("content", []) if part.get("type") == "output_text")
-    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:2000]
+        print(json.dumps({"openai_diagnosis_chat_error": f"HTTP {exc.code}", "detail": detail}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
         print(json.dumps({"openai_diagnosis_chat_error": str(exc)}, ensure_ascii=False))
         return {"error": "AI service is temporarily unavailable"}
     if not answer.strip(): return {"error": "AI returned an empty answer"}
