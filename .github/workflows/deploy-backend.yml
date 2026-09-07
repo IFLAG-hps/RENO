@@ -104,8 +104,15 @@ jobs:
         run: |
           test -n "$OPENAI_API_KEY"
           test -n "$TOKEN_SECRET"
+          case "$DEPLOYMENT_ENVIRONMENT" in
+            dev) LAMBDA_EXECUTION_ROLE_NAME=RENODevLambdaExecutionRole ;;
+            staging) LAMBDA_EXECUTION_ROLE_NAME=RENOStagingLambdaExecutionRole ;;
+            production) LAMBDA_EXECUTION_ROLE_NAME=RENOProductionLambdaExecutionRole ;;
+            *) echo "Unsupported deployment environment: $DEPLOYMENT_ENVIRONMENT"; exit 1 ;;
+          esac
           PARAM_OVERRIDES=(
             "Environment=$DEPLOYMENT_ENVIRONMENT"
+            "LambdaExecutionRoleName=$LAMBDA_EXECUTION_ROLE_NAME"
             "OpenAIApiKey=$OPENAI_API_KEY"
             "OpenAIModel=$OPENAI_MODEL"
             "TokenSecret=$TOKEN_SECRET"

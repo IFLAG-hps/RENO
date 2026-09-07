@@ -154,6 +154,7 @@ jobs:
           --no-confirm-changeset
           --no-fail-on-empty-changeset
           --parameter-overrides
+          LambdaExecutionRoleName=RENOProductionLambdaExecutionRole
           OpenAIApiKey="${{ secrets.OPENAI_API_KEY }}"
           OpenAIModel="${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}"
           TokenSecret="${{ secrets.TOKEN_SECRET }}"
