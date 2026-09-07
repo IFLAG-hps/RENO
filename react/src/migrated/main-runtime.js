@@ -3316,6 +3316,8 @@ async function openHistoryPanel() {
 async function persistPhotoUpload(file) {
   if (!EDGE_URL || !sessionToken || !file) return;
   const sessionId = await ensureSession();
+  const roomTypes = ['リビング', 'キッチン', '浴室・洗面所', '寝室', '玄関'];
+  const roomType = [...history].reverse().map(message => String(message?.content || '').trim()).find(message => roomTypes.includes(message)) || '';
   const presignRes = await fetchWithTimeout(EDGE_URL, { method: 'POST', headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: sessionToken, type: 'create_upload_url', sessionId, filename: file.name, content_type: file.type }) });
   const presign = await presignRes.json();
@@ -3323,7 +3325,7 @@ async function persistPhotoUpload(file) {
   const put = await fetchWithTimeout(presign.upload_url, { method: 'PUT', headers: { 'Content-Type': presign.content_type }, body: file }, 60000);
   if (!put.ok) throw new Error('写真をS3へアップロードできませんでした');
   const savedRes = await fetchWithTimeout(EDGE_URL, { method: 'POST', headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: sessionToken, type: 'save_photo', sessionId, key: presign.key, filename: file.name, content_type: file.type }) });
+    body: JSON.stringify({ token: sessionToken, type: 'save_photo', sessionId, key: presign.key, filename: file.name, content_type: file.type, room_type: roomType }) });
   const saved = await savedRes.json();
   if (!savedRes.ok) throw new Error(saved.error || '写真と相談履歴を紐付けできませんでした');
   window._lastPhoto = saved.photo;

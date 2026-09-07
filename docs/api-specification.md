@@ -519,7 +519,8 @@ OpenAIキー未設定時は固定フォールバック文を返します。OpenA
   "sessionId":"uuid",
   "key":"uploads/{userId}/{sessionId}/{uuid}-bathroom.jpg",
   "filename":"bathroom.jpg",
-  "content_type":"image/jpeg"
+  "content_type":"image/jpeg",
+  "room_type":"浴室・洗面所"
 }
 ```
 
@@ -803,6 +804,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
   "s3_key":"uploads/{userId}/{sessionId}/{uuid}-{filename}",
   "filename":"bathroom.jpg",
   "content_type":"image/jpeg",
+  "room_type":"浴室・洗面所",
   "size":123456,
   "created_at":1710000000,
   "schema_version":1

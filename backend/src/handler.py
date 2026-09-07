@@ -190,6 +190,7 @@ def safe_filename(name):
 
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_ROOM_TYPES = {"リビング", "キッチン", "浴室・洗面所", "寝室", "玄関"}
 
 
 def owned_upload_key(user, key):
@@ -200,7 +201,7 @@ def signed_download_url(key):
     return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
 
 
-def attach_photo(user, session_id, key, filename, content_type):
+def attach_photo(user, session_id, key, filename, content_type, room_type=""):
     if not session_id or not session_item(user, session_id): return None, "session not found"
     if not owned_upload_key(user, key): return None, "forbidden"
     content_type = str(content_type or "").lower()
@@ -210,10 +211,15 @@ def attach_photo(user, session_id, key, filename, content_type):
     except Exception:
         return None, "uploaded object not found"
     now, photo_id = int(time.time()), str(uuid.uuid4())
+    room_type = str(room_type or "").strip()
+    if room_type not in ALLOWED_ROOM_TYPES: room_type = ""
     item = {"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id, "id": photo_id, "session_id": session_id,
             "s3_key": key, "filename": safe_filename(filename), "content_type": content_type,
             "size": int(metadata.get("ContentLength", 0)), "created_at": now, "schema_version": 1}
+    if room_type: item["room_type"] = room_type
     save(item)
+    if room_type:
+        TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)}, UpdateExpression="SET room_type = :room_type, updated_at = :now", ExpressionAttributeValues={":room_type": room_type, ":now": now})
     TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)},
                       UpdateExpression="SET photo_ids = list_append(if_not_exists(photo_ids, :empty), :photo), updated_at = :now",
                       ExpressionAttributeValues={":empty": [], ":photo": [photo_id], ":now": now})
@@ -608,7 +614,7 @@ def lambda_handler(event, context):
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
             return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
         if typ == "save_photo":
-            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"))
+            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"), body.get("room_type", ""))
             if error == "session not found": return response(404, {"error": error})
             if error == "forbidden": return response(403, {"error": error})
             if error: return response(400, {"error": error})
