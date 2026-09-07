@@ -1468,7 +1468,7 @@ function showIdealImageCard(beforeFile, beforeURL, prompt) {
   window._genPrompt = prompt;
 }
 
-function startPhotoDiagnosis() {
+function startPhotoDiagnosisMock() {
   const card = document.getElementById('ideal-msg');
   if (card) card.remove();
   addUserMessage('🔎 この写真の状態を診断する');
