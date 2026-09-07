@@ -42,7 +42,7 @@ assert.match(workflows.promote, /contents: write/, 'origin promotion contents wr
 assert.match(workflows.promote, /git merge --no-ff "origin\/\$BRANCH"/, 'origin main merge command is missing');
 assert.match(workflows.promote, /HEAD:refs\/heads\/main/, 'origin main push is missing');
 const samTemplate = await readFile('backend/template.yaml', 'utf8');
-assert.match(samTemplate, /Environment:\n    Type: String/, 'SAM environment parameter is missing');
+assert.match(samTemplate, /Environment:\r?\n    Type: String/, 'SAM environment parameter is missing');
 assert.match(samTemplate, /reno-mvp-\$\{Environment\}-users/, 'Cognito user pool environment isolation is missing');
 const amplifyConfig = await readFile('amplify.yml', 'utf8');
 assert.match(amplifyConfig, /npm ci/, 'Amplify dependency installation is missing');

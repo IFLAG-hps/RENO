@@ -53,6 +53,10 @@ Parameters:
     Type: String
     AllowedValues: ['true', 'false']
     Default: 'true'
+  LambdaExecutionRoleName:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]+$'
+    Description: Existing environment-specific IAM role name used by the Lambda function.
 
 Resources:
   RenoApi:
@@ -70,16 +74,7 @@ Resources:
       CodeUri: src/
       Handler: handler.lambda_handler
       ReservedConcurrentExecutions: 2
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RenoTable
-        - S3CrudPolicy:
-            BucketName: !Ref RenoAssetBucket
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ses:SendEmail
-              Resource: '*'
+      Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LambdaExecutionRoleName}
       Events:
         Api:
           Type: Api

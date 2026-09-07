@@ -1,0 +1,51 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "StagingDynamoDBAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:ConditionCheckItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:ap-northeast-1:${ACCOUNT_ID}:table/reno-mvp-staging-*",
+        "arn:aws:dynamodb:ap-northeast-1:${ACCOUNT_ID}:table/reno-mvp-staging-*/index/*"
+      ]
+    },
+    {
+      "Sid": "StagingS3BucketAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::reno-mvp-staging-*"
+    },
+    {
+      "Sid": "StagingS3ObjectAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::reno-mvp-staging-*/*"
+    },
+    {
+      "Sid": "StagingCognitoAccess",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:GetUser"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
