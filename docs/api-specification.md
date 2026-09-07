@@ -84,6 +84,8 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 | `save_session` | 旧形式のセッション保存 | 必要 | 200 |
 | `create_upload_url` | S3署名付きPUT URL発行 | 必要 | 200 |
 | `save_photo` | アップロード済み写真保存・紐付け | 必要 | 201 |
+| `analyze_photo` | S3上の写真をAI分析 | 必要 | 200 |
+| `diagnosis_chat` | 同じ写真についてAIへ追加質問 | 必要 | 200 |
 | `create_download_url` | S3署名付きGET URL発行 | 必要 | 200 |
 | `generate_image` | 現在の写真をもとに生成画像を作成 | 必要 | 200 |
 | `handoff` | 担当者相談受付 | 必要 | 200 |
@@ -455,6 +457,57 @@ OpenAIキー未設定時は固定フォールバック文を返します。OpenA
 
 発行されたURLへ、返却された`Content-Type`を付けてHTTP PUTします。
 
+### analyze_photo
+
+保存済みの現状写真をLambdaからOpenAIへ渡し、リフォーム向けの状態診断を取得します。
+
+リクエスト:
+
+```json
+{
+  "type":"analyze_photo",
+  "token":"string",
+  "sessionId":"uuid",
+  "photoId":"uuid",
+  "key":"uploads/{userId}/{sessionId}/{uuid}-bathroom.jpg",
+  "focus":"浴室の壁と床を中心に見てほしい"
+}
+```
+
+レスポンス:
+
+```json
+{
+  "sessionId":"uuid",
+  "photoId":"uuid",
+  "analysis":{
+    "items":[
+      {"name":"壁紙（クロス）","finding":"継ぎ目の浮き・黄ばみが見られます","severity":"中度"}
+    ],
+    "summary":"優先すべき対応の説明",
+    "source":"ai"
+  }
+}
+```
+
+`key`は認証ユーザーが所有する`uploads/{userId}/`配下に限ります。`focus`は任意の自然言語で、ユーザーが特に確認してほしい箇所を指定します。分析結果は対象写真レコードの`analysis`属性と`analyzed_at`属性にも保存します。
+
+### diagnosis_chat
+
+初回分析後も、同じS3画像を参照しながらユーザーが自然言語で追加質問できます。
+
+```json
+{
+  "type":"diagnosis_chat",
+  "token":"string",
+  "key":"uploads/{userId}/{sessionId}/{uuid}-bathroom.jpg",
+  "question":"浴室の壁紙は張り替えたほうがいい？",
+  "messages":[]
+}
+```
+
+`messages`には直前までの診断に関する会話を最大8件送ります。回答も画像から確認できる範囲の参考情報とし、原因や安全性は断定しません。
+
 ### save_photo
 
 リクエスト:
@@ -466,7 +519,8 @@ OpenAIキー未設定時は固定フォールバック文を返します。OpenA
   "sessionId":"uuid",
   "key":"uploads/{userId}/{sessionId}/{uuid}-bathroom.jpg",
   "filename":"bathroom.jpg",
-  "content_type":"image/jpeg"
+  "content_type":"image/jpeg",
+  "room_type":"浴室・洗面所"
 }
 ```
 
@@ -750,6 +804,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
   "s3_key":"uploads/{userId}/{sessionId}/{uuid}-{filename}",
   "filename":"bathroom.jpg",
   "content_type":"image/jpeg",
+  "room_type":"浴室・洗面所",
   "size":123456,
   "created_at":1710000000,
   "schema_version":1
