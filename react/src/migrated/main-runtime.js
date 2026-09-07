@@ -1500,6 +1500,77 @@ function startPhotoDiagnosis() {
   }, 1100);
 }
 
+// 実装版の写真診断。旧デモ版の定義より後に置き、こちらを有効にする。
+async function startPhotoDiagnosis() {
+  const card = document.getElementById('ideal-msg');
+  if (card) card.remove();
+  addUserMessage('🔎 この写真の状態を診断する');
+  addTyping();
+  try {
+    const photo = window._lastPhoto || {};
+    const sessionId = await ensureSession();
+    if (!photo.key) throw new Error('保存済み写真のキーが見つかりません');
+    const focus = history
+      .filter(message => message && message.role === 'user')
+      .map(message => String(message.content || '').trim())
+      .filter(message => message && !message.includes('写真をアップロード') && !message.includes('サンプル画像'))
+      .slice(-3)
+      .join('\n')
+      .slice(0, 1000);
+    const res = await fetchWithTimeout(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: sessionToken,
+        type: 'analyze_photo',
+        sessionId,
+        photoId: photo.id || '',
+        key: photo.key,
+        focus,
+      }),
+    }, 40000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.analysis) throw new Error(data.error || '写真の分析に失敗しました');
+    removeTyping();
+    const items = Array.isArray(data.analysis.items) ? data.analysis.items : [];
+    const severityColor = { 軽度: 'var(--green)', 中度: 'var(--gold)', 重度: '#c05040' };
+    const rows = items.map(item => `<div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>${escapeHTML(item.name)}</strong><br><span style="font-size:11px;color:var(--muted);">${escapeHTML(item.finding)}</span><span style="float:right;color:${severityColor[item.severity] || 'var(--muted)'};font-size:11px;">${escapeHTML(item.severity)}</span></div>`).join('');
+    const chat = document.getElementById('chat');
+    const div = document.createElement('div');
+    div.className = 'msg agent';
+    div.innerHTML = `<div class="avatar agent">${getAgentIconHTML()}</div><div class="bubble agent" style="max-width:88%;"><div style="font-size:13px;font-weight:600;margin-bottom:9px;">状態診断結果</div>${window._beforeURL ? `<img src="${safeImageSrc(window._beforeURL)}" alt="診断した写真" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ''}${rows}<div style="font-size:11px;color:var(--muted);line-height:1.6;background:var(--bg);padding:9px 10px;border-radius:7px;">💡 ${escapeHTML(data.analysis.summary || '写真から確認できる範囲での参考判定です。')}</div><div style="display:flex;gap:7px;margin-top:10px;"><button class="chip" type="button" onclick="startCatalogFromDiagnosis()">素材を探す</button><button class="chip" type="button" onclick="startEstimateFromDiagnosis()">概算を見る</button><button class="chip" type="button" onclick="startGenerationFromPhoto()">施工後イメージ</button></div><div style="margin-top:12px;display:flex;gap:7px;"><input id="diagnosisQuestion" type="text" placeholder="この写真について詳しく聞く" style="flex:1;min-width:0;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);"><button class="chip" type="button" onclick="sendDiagnosisQuestion()">質問</button></div><div style="font-size:10px;color:var(--muted);margin-top:8px;">※ AIによる参考判定です。現地確認で結果が変わる場合があります。</div></div>`;
+    chat.appendChild(div);
+    scrollBottom();
+  } catch (error) {
+    removeTyping();
+    addAgentMessage(`写真の分析に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
+  }
+}
+
+async function sendDiagnosisQuestion() {
+  const input = document.getElementById('diagnosisQuestion');
+  const question = String(input?.value || '').trim();
+  const photo = window._lastPhoto || {};
+  if (!question || !photo.key) return;
+  input.value = '';
+  addUserMessage(question);
+  addTyping();
+  try {
+    const res = await fetchWithTimeout(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: sessionToken, type: 'diagnosis_chat', key: photo.key, question, messages: history.slice(-8) }),
+    }, 40000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.answer) throw new Error(data.error || '追加質問に回答できませんでした');
+    removeTyping();
+    addAgentMessage(data.answer);
+  } catch (error) {
+    removeTyping();
+    addAgentMessage(`回答の取得に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
+  }
+}
+
 function startCatalogFromDiagnosis() {
   addUserMessage('素材を探す');
   showMaterial('composite');
