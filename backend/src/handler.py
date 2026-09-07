@@ -263,7 +263,7 @@ def analyze_photo(body, user):
         "ユーザーの確認希望がある場合は、その意図を優先し、画像に写っていない対象は無理に判定しないでください。"
         f"ユーザーの確認希望: {focus or '特になし。画像全体を確認してください。'}"
         "次のJSONだけを返してください。"
-        '{"items":[{"name":"壁紙（クロス）","finding":"状態の説明","severity":"軽度|中度|重度"}],'
+        '{"items":[{"name":"component","finding":"visible condition","severity":"low|medium|high"}],'
         '"summary":"気になる箇所の短いまとめ"}'
         "itemsには画像から気になる部材を最大5件含めてください。severityは劣化の可能性の目安です。"
     )
@@ -296,8 +296,13 @@ def analyze_photo(body, user):
             continue
         name = str(item.get("name", "")).strip()[:80]
         finding = str(item.get("finding", "")).strip()[:300]
-        severity = str(item.get("severity", "")).strip()
-        if name and finding and severity in {"軽度", "中度", "重度"}:
+        severity_value = str(item.get("severity", "")).strip().lower()
+        severity = {
+            "low": "軽度", "medium": "中度", "high": "重度",
+            "軽度": "軽度", "中度": "中度", "重度": "重度",
+            "霆ｽ蠎ｦ": "軽度", "荳ｭ蠎ｦ": "中度", "驥榊ｺｦ": "重度",
+        }.get(severity_value, "")
+        if name and finding and severity:
             items.append({"name": name, "finding": finding, "severity": severity})
     if not items:
         return {"error": "AI analysis returned no valid result"}
