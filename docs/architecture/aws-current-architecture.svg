@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1500" height="820" viewBox="0 0 1500 820" role="img" aria-labelledby="title desc">
   <title id="title">RENO 現行AWSアーキテクチャ</title>
-  <desc id="desc">ブラウザからAmplify、API Gateway、Lambdaへ流れ、Lambdaが外部AI API、DynamoDB、S3、SESを呼び出す現行構成図。</desc>
+  <desc id="desc">ブラウザからAmplify、API Gateway、API Lambdaへ流れ、画像生成はSQSからWorker Lambdaへ非同期で渡し、外部AI API、DynamoDB、S3、SESを利用する現行構成図。</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6770"/></marker>
     <style>
@@ -9,7 +9,7 @@
   </defs>
   <rect width="1500" height="820" fill="#f7f9fb"/>
   <text x="55" y="50" class="title">RENO 現行AWSアーキテクチャ</text>
-  <text x="55" y="77" class="sub">検証・MVP構成：同期API、DynamoDB、S3、Cognito、外部AI API（SQS・PostgreSQLは未導入）</text>
+  <text x="55" y="77" class="sub">検証・MVP構成：通常API＋画像生成SQS、DynamoDB、S3、Cognito、外部AI API（PostgreSQLは未導入）</text>
 
   <rect x="35" y="110" width="1430" height="235" fill="#fff" stroke="#d5dce3" stroke-width="2" rx="18"/>
   <text x="60" y="145" class="group">アクセス・認証フロー</text>
@@ -31,5 +31,5 @@
   <rect x="880" y="680" width="190" height="55" class="card"/><text x="975" y="710" text-anchor="middle" class="label">SES</text><text x="975" y="728" text-anchor="middle" class="small">担当者通知（任意）</text>
   <rect x="1190" y="680" width="170" height="55" class="planned"/><text x="1275" y="710" text-anchor="middle" class="small">素材カタログDB（予定）</text>
   <path d="M560 550V600H355V680 M610 550V600H665V680 M660 550V600H975V680 M710 550V590H1275V680" class="line"/>
-  <text x="55" y="795" class="small">※公式AWS Architecture Iconsを使用。現行SAM定義に基づき、SQS・Aurora PostgreSQL・OpenSearchは未導入として表示していない。</text>
+  <text x="55" y="795" class="small">※公式AWS Architecture Iconsを使用。現行SAM定義に基づき、Aurora PostgreSQL・OpenSearchは未導入として表示していない。</text>
 </svg>
