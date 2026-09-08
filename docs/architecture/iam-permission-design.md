@@ -5,7 +5,7 @@
 RENOのAWSリソースは、`dev`、`staging`、`production`の環境単位で分離する。
 Lambdaの実行ロールには、実行する環境のリソースだけを許可する。
 
-画像生成のAPI LambdaとWorker Lambdaは同一の環境別実行ロールを使用する。API LambdaにはSQSへの送信権限、Worker Lambdaには受信・削除・可視性変更権限を付与する。キュー名は環境別プレフィックスで制限する。
+画像生成のAPI LambdaとWorker Lambdaは同一の環境別実行ロールを使用する。API LambdaにはSQSへの送信権限、Worker Lambdaには受信・削除・可視性変更権限を付与する。キュー名は環境別プレフィックスで制限する。SAMテンプレートの`ImageGenerationQueueIamPolicy`が、生成されたキューARNに限定したインラインポリシーを既存ロールへ追加する。
 
 開発者がCLIから3環境を確認・操作するためのユーザーには、3環境分のポリシーをアタッチする。ただし、このユーザーは本番リソースも操作可能になるため、MFAを必須とし、本番削除権限は付与しない。
 
@@ -26,9 +26,9 @@ RENOProductionAccessPolicy
 
 | 環境 | ロール | アタッチするポリシー |
 |---|---|---|
-| dev | `RENODevLambdaExecutionRole` | `RENODevAccessPolicy`、`AWSLambdaBasicExecutionRole` |
-| staging | `RENOStagingLambdaExecutionRole` | `RENOStagingAccessPolicy`、`AWSLambdaBasicExecutionRole` |
-| production | `RENOProductionLambdaExecutionRole` | `RENOProductionAccessPolicy`、`AWSLambdaBasicExecutionRole` |
+| dev | `RENODevLambdaExecutionRole` | `RENODevAccessPolicy`、`AWSLambdaBasicExecutionRole`、SAM管理のSQSインラインポリシー |
+| staging | `RENOStagingLambdaExecutionRole` | `RENOStagingAccessPolicy`、`AWSLambdaBasicExecutionRole`、SAM管理のSQSインラインポリシー |
+| production | `RENOProductionLambdaExecutionRole` | `RENOProductionAccessPolicy`、`AWSLambdaBasicExecutionRole`、SAM管理のSQSインラインポリシー |
 
 Lambdaロールには、自環境以外のDynamoDB・S3・Cognitoを許可しない。
 
