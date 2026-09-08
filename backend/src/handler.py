@@ -84,6 +84,101 @@ def query_user(user, prefix):
     return result.get("Items", [])
 
 
+def session_key(session_id):
+    return "SESSION#" + str(session_id)
+
+
+def message_prefix(session_id):
+    return "SESSION#" + str(session_id) + "#MESSAGE#"
+
+
+def session_item(user, session_id):
+    return TABLE.get_item(Key={"pk": "USER#" + user["sub"], "sk": session_key(session_id)}).get("Item")
+
+
+def public_session(item):
+    return {
+        "sessionId": item.get("session_id"),
+        "status": item.get("status", "active"),
+        "title": item.get("title", "新しいチャット"),
+        "createdAt": item.get("created_at"),
+        "updatedAt": item.get("updated_at"),
+        "lastMessageAt": item.get("last_message_at"),
+        "messageCount": item.get("message_count", 0),
+        "handoffStatus": item.get("handoff_status", "not_requested"),
+        "schemaVersion": item.get("schema_version", 1),
+    }
+
+
+def create_session(user):
+    now = int(time.time())
+    session_id = str(uuid.uuid4())
+    item = {
+        "pk": "USER#" + user["sub"],
+        "sk": session_key(session_id),
+        "session_id": session_id,
+        "status": "active",
+        "message_count": 0,
+        "handoff_status": "not_requested",
+        "created_at": now,
+        "updated_at": now,
+        "schema_version": 1,
+    }
+    save(item)
+    return public_session(item)
+
+
+def list_sessions(user):
+    sessions = [item for item in query_user(user, "SESSION#") if item.get("session_id") and "#MESSAGE#" not in item.get("sk", "")]
+    sessions.sort(key=lambda item: item.get("updated_at", item.get("created_at", 0)), reverse=True)
+    return [public_session(item) for item in sessions]
+
+
+def get_session_detail(user, session_id):
+    item = session_item(user, session_id)
+    if not item:
+        return None
+    result = TABLE.query(
+        KeyConditionExpression=Key("pk").eq("USER#" + user["sub"]) & Key("sk").begins_with(message_prefix(session_id)),
+        ScanIndexForward=True,
+    )
+    messages = [{"role": message.get("role"), "content": message.get("content", "")} for message in result.get("Items", [])]
+    photos = [photo for photo in query_user(user, "PHOTO#") if photo.get("session_id") == session_id]
+    for photo in photos:
+        photo["download_url"] = signed_download_url(photo["s3_key"])
+    return {**public_session(item), "messages": messages, "photos": photos}
+
+
+def save_chat_turn(user, session_id, user_message, assistant_message):
+    now = int(time.time())
+    item = {
+        "pk": "USER#" + user["sub"],
+        "sk": message_prefix(session_id) + str(time.time_ns()),
+        "session_id": session_id,
+        "role": "user",
+        "content": user_message,
+        "created_at": now,
+        "schema_version": 1,
+    }
+    save(item)
+    assistant_item = {
+        "pk": item["pk"],
+        "sk": message_prefix(session_id) + str(time.time_ns()),
+        "session_id": session_id,
+        "role": "assistant",
+        "content": assistant_message,
+        "created_at": now,
+        "schema_version": 1,
+    }
+    save(assistant_item)
+    title = user_message[:80] or "新しいチャット"
+    TABLE.update_item(
+        Key={"pk": item["pk"], "sk": session_key(session_id)},
+        UpdateExpression="SET updated_at = :now, last_message_at = :now, message_count = if_not_exists(message_count, :zero) + :two, title = if_not_exists(title, :title)",
+        ExpressionAttributeValues={":now": now, ":zero": 0, ":two": 2, ":title": title},
+    )
+
+
 def usage(user):
     count = len(query_user(user, "CHAT#"))
     return {"plan": "unlimited" if UNLIMITED_MODE else "standard", "count": count, "limit": USAGE_LIMIT, "remaining": None if UNLIMITED_MODE else max(0, USAGE_LIMIT - count), "unlimited": UNLIMITED_MODE}
@@ -94,7 +189,202 @@ def safe_filename(name):
     return "".join(c for c in name if c.isalnum() or c in "._-")[:120] or "image.jpg"
 
 
-def chat(body, user):
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_ROOM_TYPES = {"リビング", "キッチン", "浴室・洗面所", "寝室", "玄関"}
+
+
+def owned_upload_key(user, key):
+    return isinstance(key, str) and key.startswith(f"uploads/{user['sub']}/")
+
+
+def signed_download_url(key):
+    return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
+
+
+def image_data_url(key):
+    obj = S3.get_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    content_type = obj.get("ContentType", "image/jpeg")
+    image_bytes = obj["Body"].read()
+    return f"data:{content_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+
+
+def attach_photo(user, session_id, key, filename, content_type, room_type=""):
+    if not session_id or not session_item(user, session_id): return None, "session not found"
+    if not owned_upload_key(user, key): return None, "forbidden"
+    content_type = str(content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_TYPES: return None, "unsupported content type"
+    try:
+        metadata = S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return None, "uploaded object not found"
+    now, photo_id = int(time.time()), str(uuid.uuid4())
+    room_type = str(room_type or "").strip()
+    if room_type not in ALLOWED_ROOM_TYPES: room_type = ""
+    item = {"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id, "id": photo_id, "session_id": session_id,
+            "s3_key": key, "filename": safe_filename(filename), "content_type": content_type,
+            "size": int(metadata.get("ContentLength", 0)), "created_at": now, "schema_version": 1}
+    if room_type: item["room_type"] = room_type
+    save(item)
+    if room_type:
+        TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)}, UpdateExpression="SET room_type = :room_type, updated_at = :now", ExpressionAttributeValues={":room_type": room_type, ":now": now})
+    TABLE.update_item(Key={"pk": item["pk"], "sk": session_key(session_id)},
+                      UpdateExpression="SET photo_ids = list_append(if_not_exists(photo_ids, :empty), :photo), updated_at = :now",
+                      ExpressionAttributeValues={":empty": [], ":photo": [photo_id], ":now": now})
+    return {"id": photo_id, "sessionId": session_id, "key": key, "downloadUrl": signed_download_url(key)}, None
+
+
+def analyze_photo(body, user):
+    """S3上の写真をOpenAIへ渡し、リフォーム向けの状態診断を返す。"""
+    key = str(body.get("key", "")).strip()
+    session_id = str(body.get("sessionId", "")).strip()
+    photo_id = str(body.get("photoId", "")).strip()
+    focus = str(body.get("focus", "")).strip()[:1000]
+    if not key or not owned_upload_key(user, key):
+        return {"error": "forbidden photo key"}
+    if session_id and not session_item(user, session_id):
+        return {"error": "session not found"}
+    try:
+        S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return {"error": "uploaded object not found"}
+
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return {"error": "AI service is not configured"}
+
+    try:
+        image_url = image_data_url(key)
+    except Exception as exc:
+        print(json.dumps({"s3_analysis_error": str(exc)}, ensure_ascii=False))
+        return {"error": "uploaded object could not be read"}
+    prompt = (
+        "あなたはリフォーム相談の画像確認アシスタントです。添付画像を目視し、劣化していそうな箇所を大まかに推定してください。"
+        "これは正式な建物診断ではありません。画像から確認できる範囲だけを扱い、原因・経過年数・安全性を断定しないでください。"
+        "ユーザーの確認希望がある場合は、その意図を優先し、画像に写っていない対象は無理に判定しないでください。"
+        f"ユーザーの確認希望: {focus or '特になし。画像全体を確認してください。'}"
+        "次のJSONだけを返してください。"
+        '{"items":[{"name":"component","finding":"visible condition","degraded":true}],'
+        '"summary":"気になる箇所の短いまとめ"}'
+        "itemsには画像から気になる部材を最大5件含めてください。degradedは、画像からおおむね劣化していると判断できる場合だけtrue、明らかな劣化が見られない場合はfalseにしてください。"
+    )
+    request = Request("https://api.openai.com/v1/responses", data=json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "input": [{"role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_image", "image_url": image_url, "detail": "high"},
+        ]}],
+        "max_output_tokens": 600,
+        "store": False,
+    }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=30) as result:
+            payload = json.loads(result.read())
+        raw = payload.get("output_text", "") or ""
+        if not raw:
+            raw = "".join(
+                str(part.get("text", ""))
+                for output in payload.get("output", [])
+                if isinstance(output, dict)
+                for part in output.get("content", [])
+                if isinstance(part, dict) and part.get("type") in {"output_text", "text"}
+            )
+        match = raw[raw.find("{"):raw.rfind("}") + 1]
+        result_data = json.loads(match) if match else {}
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:2000]
+        print(json.dumps({"openai_analysis_error": f"HTTP {exc.code}", "detail": detail}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    except (URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        print(json.dumps({"openai_analysis_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+
+    source_items = result_data.get("items")
+    if not isinstance(source_items, list):
+        source_items = result_data.get("areas", [])
+    items = []
+    for item in source_items if isinstance(source_items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:80]
+        finding = str(item.get("finding", "")).strip()[:300]
+        severity_value = str(item.get("severity", "")).strip().lower()
+        severity = {
+            "low": "軽度", "medium": "中度", "high": "重度",
+            "軽度": "軽度", "中度": "中度", "重度": "重度",
+            "霆ｽ蠎ｦ": "軽度", "荳ｭ蠎ｦ": "中度", "驥榊ｺｦ": "重度",
+        }.get(severity_value, "")
+        if "degraded" in item:
+            degraded = item.get("degraded")
+            if isinstance(degraded, bool):
+                severity = "劣化あり" if degraded else "劣化なし"
+        if name and finding and severity:
+            items.append({"name": name, "finding": finding, "severity": severity})
+    if not items:
+        print(json.dumps({
+            "analysis_validation_failed": True,
+            "response_keys": sorted(result_data.keys()) if isinstance(result_data, dict) else [],
+            "source_item_count": len(source_items) if isinstance(source_items, list) else 0,
+            "source_item_keys": [sorted(item.keys()) for item in source_items[:5] if isinstance(item, dict)] if isinstance(source_items, list) else [],
+            "raw_response_length": len(raw),
+        }, ensure_ascii=False))
+        return {"error": "AI analysis returned no valid result"}
+    analysis = {"items": items[:5], "summary": str(result_data.get("summary", "")).strip()[:400], "focus": focus, "source": "ai"}
+
+    if photo_id and session_id:
+        TABLE.update_item(
+            Key={"pk": "USER#" + user["sub"], "sk": "PHOTO#" + photo_id},
+            UpdateExpression="SET analysis = :analysis, analyzed_at = :now",
+            ExpressionAttributeValues={":analysis": analysis, ":now": int(time.time())},
+        )
+    return {"sessionId": session_id, "photoId": photo_id, "analysis": analysis}
+
+
+def diagnosis_chat(body, user):
+    """同じ写真を見ながら、ユーザーの追加質問に回答する。"""
+    key = str(body.get("key", "")).strip()
+    question = str(body.get("question", "")).strip()[:1000]
+    messages = body.get("messages", [])
+    if not key or not owned_upload_key(user, key): return {"error": "forbidden photo key"}
+    if not question: return {"error": "question is required"}
+    try:
+        S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+    except Exception:
+        return {"error": "uploaded object not found"}
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key: return {"error": "AI service is not configured"}
+    history_messages = []
+    if isinstance(messages, list):
+        history_messages = [{"role": m.get("role"), "content": str(m.get("content", ""))[:2000]} for m in messages[-8:] if isinstance(m, dict) and m.get("role") in {"user", "assistant"}]
+    prompt = "同じ写真についての追加質問に答えてください。画像から確認できる範囲に限定し、原因・経過年数・安全性を断定せず、必要なら現地確認を案内してください。"
+    input_content = [{"type": "input_text", "text": prompt}]
+    try:
+        input_content.append({"type": "input_image", "image_url": image_data_url(key), "detail": "auto"})
+    except Exception as exc:
+        print(json.dumps({"s3_diagnosis_chat_error": str(exc)}, ensure_ascii=False))
+        return {"error": "uploaded object could not be read"}
+    input_messages = history_messages + [{"role": "user", "content": question}]
+    request = Request("https://api.openai.com/v1/responses", data=json.dumps({
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "input": [{"role": "system", "content": prompt}, *input_messages[:-1], {"role": "user", "content": input_content}],
+        "max_output_tokens": 500,
+        "store": False,
+    }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=30) as result:
+            payload = json.loads(result.read())
+        answer = payload.get("output_text", "") or "".join(part.get("text", "") for item in payload.get("output", []) for part in item.get("content", []) if part.get("type") == "output_text")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:2000]
+        print(json.dumps({"openai_diagnosis_chat_error": f"HTTP {exc.code}", "detail": detail}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+        print(json.dumps({"openai_diagnosis_chat_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI service is temporarily unavailable"}
+    if not answer.strip(): return {"error": "AI returned an empty answer"}
+    return {"answer": answer.strip(), "source": "ai"}
+
+
+def chat(body, user, session_id):
     messages = body.get("messages", [])
     if not isinstance(messages, list) or len(messages) > 50: return {"error": "messages must be an array of at most 50 items"}
     current = usage(user)
@@ -112,8 +402,11 @@ def chat(body, user):
         text = payload.get("output_text", "") or "".join(part.get("text", "") for item in payload.get("output", []) for part in item.get("content", []) if part.get("type") == "output_text")
     else:
         text = "ご相談内容を確認しました。現在の状態・ご希望の部屋・ご予算を教えてください。"
-    save({"pk": "USER#" + user["sub"], "sk": "CHAT#" + str(time.time_ns()), "messages": messages[-20:], "updated_at": int(time.time())})
-    return {"content": [{"type": "text", "text": text}], "usage": usage(user)}
+    user_message = next((str(message.get("content", "")) for message in reversed(messages) if isinstance(message, dict) and message.get("role") == "user"), "")
+    save_chat_turn(user, session_id, user_message, text)
+    # Keep the existing usage counter compatible while the session history uses message records.
+    save({"pk": "USER#" + user["sub"], "sk": "CHAT#" + str(time.time_ns()), "session_id": session_id, "messages": messages[-20:], "updated_at": int(time.time())})
+    return {"sessionId": session_id, "content": [{"type": "text", "text": text}], "usage": usage(user)}
 
 
 def estimate(body, user):
@@ -309,9 +602,26 @@ def lambda_handler(event, context):
         user = subject_from_token(body.get("token", ""))
         if not user: return response(401, {"error": "unauthorized"})
         if typ == "chat":
-            result = chat(body, user)
+            session_id = str(body.get("sessionId", "")).strip()
+            if session_id:
+                existing = session_item(user, session_id)
+                if not existing: return response(404, {"error": "session not found"})
+                if existing.get("status") == "archived": return response(409, {"error": "session is archived"})
+            else:
+                session_id = create_session(user)["sessionId"]
+            result = chat(body, user, session_id)
             status = 429 if "usage limit" in result.get("error", "") else 503 if "unavailable" in result.get("error", "") else 400 if "messages" in result.get("error", "") else 200
             return response(status, result)
+        if typ == "save_chat_turn":
+            session_id = str(body.get("sessionId", "")).strip()
+            user_message = str(body.get("userMessage", "")).strip()
+            assistant_message = str(body.get("assistantMessage", "")).strip()
+            if not session_id or not user_message or not assistant_message:
+                return response(400, {"error": "sessionId, userMessage and assistantMessage are required"})
+            if not session_item(user, session_id):
+                return response(404, {"error": "session not found"})
+            save_chat_turn(user, session_id, user_message, assistant_message)
+            return response(200, {"ok": True, "sessionId": session_id})
         if typ == "estimate":
             result = estimate(body, user)
             status = 400 if "error" in result else 200
@@ -321,19 +631,56 @@ def lambda_handler(event, context):
             status = 400 if "error" in result else 200
             return response(status, result)
         if typ == "get_usage": return response(200, usage(user))
+        if typ == "create_session":
+            return response(201, {"session": create_session(user)})
+        if typ == "get_sessions":
+            return response(200, {"sessions": list_sessions(user)})
+        if typ == "get_session":
+            session_id = str(body.get("sessionId", "")).strip()
+            if not session_id: return response(400, {"error": "sessionId is required"})
+            detail = get_session_detail(user, session_id)
+            if not detail: return response(404, {"error": "session not found"})
+            return response(200, {"session": detail})
+        if typ == "archive_session":
+            session_id = str(body.get("sessionId", "")).strip()
+            if not session_id: return response(400, {"error": "sessionId is required"})
+            if not session_item(user, session_id): return response(404, {"error": "session not found"})
+            TABLE.update_item(
+                Key={"pk": "USER#" + user["sub"], "sk": session_key(session_id)},
+                UpdateExpression="SET #status = :status, updated_at = :now",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={":status": "archived", ":now": int(time.time())},
+            )
+            return response(200, {"sessionId": session_id, "status": "archived"})
         if typ == "save_session":
             save({"pk": "USER#" + user["sub"], "sk": "SESSION#" + str(time.time_ns()), "data": body.get("data", {}), "created_at": int(time.time())})
             return response(200, {"ok": True})
         if typ == "create_upload_url":
-            content_type = str(body.get("content_type", "image/jpeg"))
-            if content_type not in ("image/jpeg", "image/png", "image/webp", "application/pdf"): return response(400, {"error": "unsupported content type"})
-            key = f"uploads/{user['sub']}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
+            content_type = str(body.get("content_type", "image/jpeg")).lower()
+            if content_type not in ALLOWED_IMAGE_TYPES | {"application/pdf"}: return response(400, {"error": "unsupported content type"})
+            session_id = str(body.get("sessionId", "")).strip()
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            key = f"uploads/{user['sub']}/{session_id or 'unattached'}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
-            return response(200, {"key": key, "upload_url": url, "expires_in": 900})
+            return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "save_photo":
+            photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"), body.get("room_type", ""))
+            if error == "session not found": return response(404, {"error": error})
+            if error == "forbidden": return response(403, {"error": error})
+            if error: return response(400, {"error": error})
+            return response(201, {"photo": photo})
+        if typ == "analyze_photo":
+            result = analyze_photo(body, user)
+            status = 200 if "error" not in result else (404 if result["error"] in {"session not found", "uploaded object not found"} else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
+        if typ == "diagnosis_chat":
+            result = diagnosis_chat(body, user)
+            status = 200 if "error" not in result else (400 if result["error"] == "question is required" else 404 if result["error"] == "uploaded object not found" else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
             if not key.startswith(allowed): return response(403, {"error": "forbidden"})
-            url = S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
+            url = signed_download_url(key)
             return response(200, {"download_url": url, "expires_in": 900})
         if typ == "create_guest_pin":
             if user.get("role") != "admin": return response(403, {"error": "admin only"})
@@ -352,17 +699,25 @@ def lambda_handler(event, context):
         if typ == "save_case":
             title, room = str(body.get("title", "")).strip(), str(body.get("room", "")).strip()
             if not title or not room: return response(400, {"error": "title and room are required"})
-            image = str(body.get("image_data", ""))
+            image_key = str(body.get("image_key", "")).strip()
+            if image_key and not owned_upload_key(user, image_key): return response(403, {"error": "forbidden image key"})
+            image = "" if image_key else str(body.get("image_data", ""))
             if len(image) > 700_000: return response(413, {"error": "image is too large"})
-            item = {"pk": "USER#" + user["sub"], "sk": "CASE#" + str(uuid.uuid4()), "id": str(uuid.uuid4()), "title": title[:120], "room": room[:80], "style": str(body.get("style", ""))[:80], "budget_range": str(body.get("budget_range", ""))[:80], "description": str(body.get("description", ""))[:1000], "image_data": image, "created_at": int(time.time())}
+            item = {"pk": "USER#" + user["sub"], "sk": "CASE#" + str(uuid.uuid4()), "id": str(uuid.uuid4()), "title": title[:120], "room": room[:80], "style": str(body.get("style", ""))[:80], "budget_range": str(body.get("budget_range", ""))[:80], "description": str(body.get("description", ""))[:1000], "image_data": image, "image_key": image_key, "created_at": int(time.time())}
             save(item); return response(200, {"ok": True, "case": item})
         if typ == "get_cases":
             room, style = str(body.get("room", "")), str(body.get("style", "")); items = query_user(user, "CASE#")
-            return response(200, [i for i in items if (not room or i.get("room") == room) and (not style or i.get("style") == style)])
+            result = [i for i in items if (not room or i.get("room") == room) and (not style or i.get("style") == style)]
+            for item in result:
+                if item.get("image_key"): item["image_url"] = signed_download_url(item["image_key"])
+            return response(200, result)
         if typ == "delete_case":
             items = [i for i in query_user(user, "CASE#") if i.get("id") == str(body.get("id", ""))]
             if not items: return response(404, {"error": "case not found"})
-            TABLE.delete_item(Key={"pk": items[0]["pk"], "sk": items[0]["sk"]}); return response(200, {"ok": True})
+            item = items[0]
+            TABLE.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+            if item.get("image_key"): S3.delete_object(Bucket=os.environ["ASSET_BUCKET"], Key=item["image_key"])
+            return response(200, {"ok": True})
         if typ == "handoff":
             if os.environ.get("SES_FROM_EMAIL") and os.environ.get("SES_TO_EMAIL"):
                 SES.send_email(Source=os.environ["SES_FROM_EMAIL"], Destination={"ToAddresses": [os.environ["SES_TO_EMAIL"]]}, Message={"Subject": {"Data": "RENO相談受付"}, "Body": {"Text": {"Data": json.dumps(body.get("data", {}), ensure_ascii=False)}}})

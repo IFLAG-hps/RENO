@@ -18,10 +18,11 @@ PowerShellを2つ開き、リポジトリ直下で次を実行します。
 別のPowerShellでフロントエンドを起動します。
 
 ```powershell
-npm run serve:legacy
+npm run build:react
+npm run serve:react
 ```
 
-ブラウザで `http://127.0.0.1:4174/` を開き、PIN `5678` でログインします。
+ブラウザで `http://127.0.0.1:4173/` を開き、認証なしで利用を開始します。
 
 ## 確認できる内容
 
