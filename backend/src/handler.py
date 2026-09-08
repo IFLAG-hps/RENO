@@ -273,7 +273,8 @@ def analyze_photo(body, user):
             {"type": "input_text", "text": prompt},
             {"type": "input_image", "image_url": image_url, "detail": "high"},
         ]}],
-        "max_output_tokens": 600,
+        "max_output_tokens": 2000,
+        "reasoning": {"effort": "low"},
         "store": False,
     }).encode(), headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, method="POST")
     try:
@@ -294,6 +295,7 @@ def analyze_photo(body, user):
             "openai_analysis_response": {
                 "payload_keys": sorted(payload.keys()),
                 "status": payload.get("status"),
+                "incomplete_reason": (payload.get("incomplete_details") or {}).get("reason") if isinstance(payload.get("incomplete_details"), dict) else None,
                 "output_summary": output_summary,
                 "has_output_text": isinstance(payload.get("output_text"), str) and bool(payload.get("output_text")),
             }
