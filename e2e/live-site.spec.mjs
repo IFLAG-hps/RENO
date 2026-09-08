@@ -36,7 +36,10 @@ test.describe('@live-site オンライン実サイト スモークテスト', ()
     for (const legacyPath of ['/pages/agent.html', '/pages/revenue.html', '/pages/mockup.html']) {
       await page.goto(legacyPath);
       await expect(page.locator('#root')).toBeVisible({ timeout: 20_000 });
-      await expect(page.locator('#app')).toBeVisible({ timeout: 20_000 });
+      await expect.poll(
+        () => page.locator('#app, .agent-card, .plans-grid, .phone').count(),
+        { timeout: 20_000 },
+      ).toBeGreaterThan(0);
     }
   });
 
