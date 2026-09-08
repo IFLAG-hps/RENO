@@ -166,6 +166,25 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  ImageGenerationQueueIamPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub reno-mvp-${Environment}-image-generation-sqs
+      Roles:
+        - !Ref LambdaExecutionRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ImageGenerationQueueAccess
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ImageGenerationQueue.Arn
+
   RenoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
