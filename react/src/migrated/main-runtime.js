@@ -35,6 +35,28 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
   }
 }
 
+// Retry transient transport/server failures. AI generation itself remains user-triggered
+// to avoid charging twice for a duplicated generation request.
+async function fetchTransient(url, options = {}, timeoutMs = 30000, attempts = 2) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, options, timeoutMs);
+      if (response.status >= 500 && attempt + 1 < attempts) {
+        await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < attempts) {
+        await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError || new Error('NETWORK_ERROR');
+}
+
 const SYSTEM_PROMPT = `あなたはRENOのAIリフォームコンサルタントです。
 施主とフレンドリーにチャットし、要望をヒアリングして施工後のビジュアルイメージ生成を提案します。
 
@@ -182,8 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (qrBtn) qrBtn.style.display = 'flex';
     });
   }
+  const reactAgentUrl = new URL('/', location.origin).href;
   const qrUrl = document.querySelector('.qr-url');
-  if (qrUrl) qrUrl.textContent = `${location.origin}${location.pathname}`;
+  if (qrUrl) qrUrl.textContent = reactAgentUrl;
+  const qrImage = document.querySelector('#qrModal .qr-img-wrap img');
+  if (qrImage) {
+    qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(reactAgentUrl)}`;
+  }
   // PWAモード（スタンドアロン）なら「ブラウザで開く」を表示
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
@@ -1723,7 +1750,7 @@ async function generateWithFiles(beforeFile, idealFile) {
       body: JSON.stringify({ token: sessionToken, type: 'generate_image', sessionId: currentSessionId,
         prompt: enhancedPrompt, sourceImageKey, context: generationContext })
     }, 90000);
-    const data = await res.json();
+    let data = await res.json();
 
     if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
       removeTyping();
@@ -1731,6 +1758,23 @@ async function generateWithFiles(beforeFile, idealFile) {
       addAgentMessage('今月の生成回数に達しました。プランのアップグレードをご検討ください。', null, null,
         ['概算を見る', '担当者に相談', '相談内容を続ける']);
       return;
+    }
+
+    if (res.ok && data.jobId) {
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < 10 * 60 * 1000) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        const statusRes = await fetchWithTimeout(EDGE_URL, {
+          method: 'POST',
+          headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: sessionToken, type: 'image_generation_status', jobId: data.jobId })
+        }, 30000);
+        data = await statusRes.json();
+        if (!statusRes.ok) throw new Error(data.error || '画像生成ジョブの確認に失敗しました');
+        if (data.status === 'completed') break;
+        if (data.status === 'failed') throw new Error(data.error || '画像生成に失敗しました');
+      }
+      if (data.status !== 'completed') throw new Error('画像生成に時間がかかりすぎています');
     }
 
     if (!res.ok) throw new Error(data.error?.message || data.error || '生成に失敗しました');
@@ -2911,7 +2955,7 @@ async function issueGuestPin() {
 
 function showGpinResult(data) {
   const expires = new Date(data.expires_at).toLocaleDateString('ja-JP', { month:'long', day:'numeric' });
-  const url = `${location.origin}${location.pathname}`;
+  const url = new URL('/', location.origin).href;
   const fullUrl = `${url}?pin=${data.pin}`;
   const encodedLabel = encodeURIComponent(String(data.label || '施主様'));
   document.getElementById('gpinResult').innerHTML = `
@@ -3286,7 +3330,7 @@ async function openHistoryPanel() {
   list.innerHTML = '<div class="history-empty">読み込み中...</div>';
 
   try {
-    const res  = await fetch(EDGE_URL, {
+    const res  = await fetchTransient(EDGE_URL, {
       method: 'POST',
       headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: sessionToken, type: 'get_sessions' })
@@ -3612,9 +3656,53 @@ async function callAgent() {
     removeTyping();
     addAgentMessage('一時的に応答を取得できませんでした。相談を続けるか、もう一度送信できます。', null, null,
       ['もう一度送る', '担当者に相談', '相談内容を続ける']);
+    addRollbackButton();
   }
   persistChatHistory();
+  persistCurrentChatState();
   document.getElementById('sendBtn').disabled = false;
+}
+
+function retryLastAgentCall() {
+  const lastUser = [...history].reverse().find(message => message?.role === 'user');
+  if (!lastUser || document.getElementById('sendBtn')?.disabled) return;
+  removeSuggestions();
+  callAgent();
+}
+
+function rollbackLastFailedTurn() {
+  const lastUserIndex = [...history].map((message, index) => ({ message, index }))
+    .reverse().find(item => item.message?.role === 'user')?.index;
+  if (lastUserIndex === undefined) return;
+  const input = document.getElementById('userInput');
+  const lastUser = history[lastUserIndex];
+  if (input) {
+    input.value = String(lastUser.content || '');
+    input.focus();
+    autoResize(input);
+  }
+  history.splice(lastUserIndex, 1);
+  const userMessages = document.querySelectorAll('#chat .msg.user');
+  userMessages[userMessages.length - 1]?.remove();
+  const agentMessages = document.querySelectorAll('#chat .msg.agent');
+  agentMessages[agentMessages.length - 1]?.remove();
+  removeSuggestions();
+  persistChatHistory();
+  persistCurrentChatState();
+  scrollBottom();
+}
+
+function addRollbackButton() {
+  const agentMessages = document.querySelectorAll('#chat .msg.agent');
+  const message = agentMessages[agentMessages.length - 1];
+  if (!message || message.querySelector('[data-action="rollback"]')) return;
+  const button = document.createElement('button');
+  button.className = 'chip';
+  button.type = 'button';
+  button.dataset.action = 'rollback';
+  button.textContent = '一つ戻って続ける';
+  button.onclick = rollbackLastFailedTurn;
+  message.querySelector('.bubble')?.appendChild(button);
 }
 
 

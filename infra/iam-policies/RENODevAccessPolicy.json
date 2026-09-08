@@ -2,6 +2,18 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "DevImageGenerationQueueAccess",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes"
+      ],
+      "Resource": "arn:aws:sqs:ap-northeast-1:${ACCOUNT_ID}:reno-mvp-dev-*"
+    },
+    {
       "Sid": "DevDynamoDBAccess",
       "Effect": "Allow",
       "Action": [

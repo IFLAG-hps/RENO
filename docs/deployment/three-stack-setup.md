@@ -8,7 +8,7 @@
 | `staging` | レビュー用プレビュー | `reno-mvp-staging` | 上長の受入確認 |
 | `main` | 動作デモ・公開URL | `reno-mvp-prod` | 承認済みの公開版 |
 
-各CloudFormationスタックは、独立したDynamoDBテーブル、S3バケット、Cognito User Pool、API Gateway、Lambdaを作成する。環境間で相談データやアップロード画像を共有しない。
+各CloudFormationスタックは、独立したDynamoDBテーブル、S3バケット、Cognito User Pool、API Gateway、API Lambda、画像生成Worker Lambda、SQSキュー、DLQを作成する。環境間で相談データやアップロード画像、生成ジョブを共有しない。
 
 この3環境は機能フェーズを分けるものではない。同一コミットを`dev`で開発確認、`staging`で受入確認、`main`で公開するための昇格先である。Phase 2・Phase 3の機能も、同じ順序で全環境へ進める。
 
@@ -86,6 +86,10 @@ Fork先リポジトリの **Settings > Branches** で、`main`、`staging`、`de
 8. Fork元のFeatureがCI成功後にFork先の同名Featureへ同期されることを確認する。
 
 ## 運用上の注意
+
+- 既存の環境別Lambda実行ロールへ、`infra/iam-policies/RENO*AccessPolicy.json`のSQS権限を反映してからデプロイする。
+- 画像生成は非同期のため、APIの成功レスポンスは生成完了ではなくジョブ登録完了を意味する。
+- 3回失敗した画像生成ジョブはSQSのDLQへ移動する。DLQのメッセージ数をCloudWatchで監視する。
 
 - `dev`への自動デプロイには、破壊的なスキーマ変更を含めない。変更前にバックアップ・移行手順を準備する。
 - `staging`と`production`は、GitHub Environmentの承認を通してから更新する。

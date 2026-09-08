@@ -14,6 +14,7 @@ Globals:
         OPENAI_API_KEY: !Ref OpenAIApiKey
         OPENAI_MODEL: !Ref OpenAIModel
         OPENAI_IMAGE_MODEL: !Ref OpenAIImageModel
+        IMAGE_GENERATION_QUEUE_URL: !Ref ImageGenerationQueue
         SES_FROM_EMAIL: !Ref SesFromEmail
         SES_TO_EMAIL: !Ref SesToEmail
         TOKEN_SECRET: !Ref TokenSecret
@@ -87,6 +88,23 @@ Resources:
             Path: /agent
             Method: post
 
+  ImageGenerationWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handler.lambda_handler
+      Timeout: 900
+      ReservedConcurrentExecutions: 2
+      Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LambdaExecutionRoleName}
+      Events:
+        ImageGenerationQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ImageGenerationQueue.Arn
+            BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
   RenoTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -125,6 +143,25 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ImageGenerationDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ImageGenerationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 5400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ImageGenerationDlq.Arn
+        maxReceiveCount: 3
       Tags:
         - Key: Environment
           Value: !Ref Environment
