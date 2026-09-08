@@ -31,7 +31,7 @@ test.describe('オンライン実サイト スモークテスト', () => {
     await expect.poll(async () => page.evaluate(() => {
       const src = document.querySelector('#desktopQrDock img')?.src;
       return src ? new URL(src).searchParams.get('data') : null;
-    })).toBe(`${new URL(process.env.E2E_BASE_URL).origin}/`);
+    })).toBe(`${new URL(page.url()).origin}/`);
 
     for (const legacyPath of ['/pages/agent.html', '/pages/revenue.html', '/pages/mockup.html']) {
       await page.goto(legacyPath);
