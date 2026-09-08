@@ -3238,8 +3238,21 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
       document.getElementById('pdf-notes-block').style.display = 'none';
     }
 
-    // 3. Wait for images to load
-    await new Promise(r => setTimeout(r, 600));
+    // 3. 画像の読み込み完了を待ってからhtml2canvasへ渡す。
+    // setTimeoutだけでは、S3署名URLや大きなdata URLの画像が未描画のまま
+    // キャプチャされることがあるため、実際のdecode完了を確認する。
+    const waitForImageReady = image => {
+      if (!image?.src) return Promise.resolve();
+      if (image.complete && image.naturalWidth > 0) {
+        return typeof image.decode === 'function' ? image.decode().catch(() => {}) : Promise.resolve();
+      }
+      return new Promise(resolve => {
+        const finish = () => { image.onload = null; image.onerror = null; resolve(); };
+        image.onload = finish;
+        image.onerror = finish;
+      });
+    };
+    await Promise.all([waitForImageReady(beforeImage), waitForImageReady(afterImage)]);
 
     // 4. html2canvas → jsPDF
     const canvas = await html2canvas(tmpl.firstElementChild, {
