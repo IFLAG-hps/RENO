@@ -87,7 +87,7 @@ Fork先リポジトリの **Settings > Branches** で、`main`、`staging`、`de
 
 ## 運用上の注意
 
-- 既存の環境別Lambda実行ロールへ、`infra/iam-policies/RENO*AccessPolicy.json`のSQS権限を反映してからデプロイする。
+- SAMテンプレートが既存の環境別Lambda実行ロールへSQS用インラインポリシーを追加するため、デプロイ用AWSユーザーに対象ロールへの`iam:PutRolePolicy`権限が必要。既存の`infra/iam-policies/RENO*AccessPolicy.json`にも同じ権限を定義している。
 - 画像生成は非同期のため、APIの成功レスポンスは生成完了ではなくジョブ登録完了を意味する。
 - 3回失敗した画像生成ジョブはSQSのDLQへ移動する。DLQのメッセージ数をCloudWatchで監視する。
 
