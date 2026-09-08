@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('オンライン実サイト スモークテスト', () => {
+test.describe('@live-site オンライン実サイト スモークテスト', () => {
   test('React版エージェントが表示され、実APIから応答を取得できる', async ({ page }) => {
     const consoleErrors = [];
     page.on('console', (message) => {
