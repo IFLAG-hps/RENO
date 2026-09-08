@@ -1,19 +1,33 @@
-# RENO ドキュメント
+# RENO ドキュメント案内
 
-RENOのリフォーム相談モックと、追加機能の検討内容をまとめるドキュメントです。
+文書を用途別に整理しています。迷った場合は、まずプロダクト資料とAI機能資料を確認してください。
 
-## ドキュメント一覧
+## フォルダ構成
 
-- [全体方針](./product-direction.md)
-- [画像診断ワークフロー](./image-diagnosis-workflow.md)
-- [全体ワークフロー図](./workflows/overall-workflow.md)
-- [ブランチ運用と fork 同期フロー](./workflows/branch-workflow.md)
+| フォルダ | 内容 |
+|---|---|
+| [product](./product/) | 商品方針、MVP、ロードマップ、バックログ、修正メモ |
+| [ai](./ai/) | API仕様、写真診断、完成予想図、AI利用方針 |
+| [architecture](./architecture/) | AWS構成、権限、認証、実装方式 |
+| [operations](./operations/) | 開発、デプロイ、運用、費用試算 |
+| [testing](./testing/) | E2Eテスト方針 |
+| [deployment](./deployment/) | 環境別のデプロイ構成 |
+| [workflows](./workflows/) | ブランチ、環境、作業フロー |
+| [templates](./templates/) | 文書テンプレート |
+| [archive](./archive/) | 廃止・過去検討資料 |
 
-## 現在の位置づけ
+## まず読む資料
 
-- `index.html`：Amplify Hostingで公開するメインアプリの元データ
-- `pages/mockup.html`：追加機能4案を切り出したUIプレビュー。検討用・参考用
-- `pages/`：補助的なページ
-- `assets/`：画像・アイコンなどの素材
+- [商品方針](./product/product-direction.md)
+- [MVP提案](./product/mvp-proposal.md)
+- [API仕様](./ai/api-specification.md)
+- [写真診断フロー](./ai/image-diagnosis-workflow.md)
+- [完成予想図メモ](./ai/image-generation-memo.md)
+- [運用費用・損益分岐点](./operations/operating-cost-and-break-even-memo.md)
+- [全体ワークフロー](./workflows/overall-workflow.md)
 
-今回の追加機能は、独立した画面として完結させるのではなく、メインのリフォーム相談ワークフローへ合流させる方針です。
+## 更新ルール
+
+- 新しい仕様は用途別フォルダに配置する。
+- 一時的なメモは、正式文書へ反映後に削除または `archive` へ移動する。
+- ファイル名は既存リンクを考慮し、変更が必要な場合は同時に参照先を更新する。
