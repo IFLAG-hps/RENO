@@ -1756,7 +1756,7 @@ async function generateWithFiles(beforeFile, idealFile) {
   } catch(e) {
     removeTyping();
     // フォールバック：サンプル画像でビフォーアフターを表示
-    const fallbackSrc = await getFallbackImage(window._genPrompt || '');
+    const fallbackSrc = null;
     const timeoutMsg = '画像生成に時間がかかりすぎたため中断しました。混雑している可能性があります。参考イメージをご覧いただくか、少し時間をおいてもう一度お試しください。';
     const headline = e.isTimeout ? timeoutMsg : '現在AIイメージ生成をご利用いただけません。参考イメージをご覧ください。';
     if (fallbackSrc) {
