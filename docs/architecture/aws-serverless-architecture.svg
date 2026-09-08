@@ -55,7 +55,7 @@
   <text x="980" y="438" class="group">データ・非同期処理</text>
   <rect x="980" y="465" width="145" height="115" class="card"/><image x="1025" y="475" width="55" height="55" href="../assets/aws-icons/s3.svg"/><text x="1052" y="557" text-anchor="middle" class="label">Amazon S3</text>
   <rect x="1150" y="465" width="145" height="115" class="card"/><image x="1195" y="475" width="55" height="55" href="../assets/aws-icons/dynamodb.svg"/><text x="1222" y="557" text-anchor="middle" class="label">DynamoDB</text>
-  <rect x="1320" y="465" width="145" height="115" class="card"/><image x="1365" y="475" width="55" height="55" href="../assets/aws-icons/sqs.svg"/><text x="1392" y="548" text-anchor="middle" class="label">SQS + DLQ</text><text x="1392" y="570" text-anchor="middle" class="small">画像生成・PDF</text>
+  <rect x="1320" y="465" width="145" height="115" class="card"/><image x="1365" y="475" width="55" height="55" href="../assets/aws-icons/sqs.svg"/><text x="1392" y="548" text-anchor="middle" class="label">SQS + DLQ</text><text x="1392" y="570" text-anchor="middle" class="small">画像生成</text>
   <path d="M900 515H980 M900 550H1150 M900 585H1320" class="line"/>
 
   <rect x="50" y="700" width="1500" height="205" class="optional"/>

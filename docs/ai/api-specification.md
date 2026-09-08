@@ -87,7 +87,8 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 | `analyze_photo` | S3上の写真をAI分析 | 必要 | 200 |
 | `diagnosis_chat` | 同じ写真についてAIへ追加質問 | 必要 | 200 |
 | `create_download_url` | S3署名付きGET URL発行 | 必要 | 200 |
-| `generate_image` | 現在の写真をもとに生成画像を作成 | 必要 | 200 |
+| `generate_image` | 現在の写真をもとに画像生成ジョブを登録 | 必要 | 202 |
+| `image_generation_status` | 画像生成ジョブの状態を取得 | 必要 | 200 |
 | `handoff` | 担当者相談受付 | 必要 | 200 |
 | `create_guest_pin` | ゲストPIN発行 | 管理者のみ | 200 |
 | `get_guest_pins` | ゲストPIN一覧取得 | 管理者のみ | 200 |
@@ -560,7 +561,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 ### generate_image
 
 「施工後イメージを生成」ボタン押下時に呼び出すAPIです。
-画像生成処理はLambdaからOpenAI画像生成APIを呼び出して実行し、生成画像をS3へ保存します。
+画像生成処理はAPI LambdaからSQSへジョブを登録し、画像生成Worker LambdaがOpenAI画像生成APIを呼び出して実行します。生成画像はS3へ保存され、状態と結果はDynamoDBへ保存されます。
 
 ```json
 {
@@ -589,13 +590,14 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 #### 処理フロー
 
 1. フロントエンドで生成ボタンを押下
-2. `generate_image`をAPI Gateway経由でLambdaへ送信
-3. Lambdaが`sessionId`とS3キーの所有権を確認
-4. LambdaがS3から現状写真・参考画像を取得
-5. LambdaがOpenAI画像生成APIを呼び出す
-6. 生成画像を`generated/{userId}/{sessionId}/{uuid}.png`へ保存
-7. 生成画像のメタデータをDynamoDBへ保存
-8. 生成画像の署名付きURLをレスポンスで返す
+2. `generate_image`をAPI Gateway経由でAPI Lambdaへ送信
+3. API Lambdaが`sessionId`とS3キーの所有権を確認
+4. API Lambdaが画像生成ジョブをDynamoDBへ保存し、SQSへ送信
+5. API Lambdaが`jobId`と`status: queued`を返す
+6. Worker LambdaがS3から現状写真を取得し、OpenAI画像生成APIを呼び出す
+7. 生成画像を`generated/{userId}/{sessionId}/{uuid}.png`へ保存
+8. Worker LambdaがDynamoDBのジョブを`completed`へ更新
+9. フロントエンドが`image_generation_status`で完了を確認し、署名付きURLを表示
 
 #### 成功レスポンス: 200
 
@@ -626,9 +628,15 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 | 403 | S3キーがユーザー所有でない |
 | 404 | セッションまたは入力画像が存在しない |
 | 429 | 画像生成回数の上限超過 |
-| 502/503 | OpenAIまたは画像生成処理の一時的な失敗 |
+| 502/503 | キュー登録、OpenAIまたは画像生成処理の一時的な失敗 |
 
-> 注: `generate_image`は設計上確定済みですが、Lambdaの分岐処理・OpenAI呼び出し・生成画像保存は未実装です。
+`generate_image`の成功レスポンス例:
+
+```json
+{"jobId":"uuid","status":"queued","sessionId":"uuid"}
+```
+
+`image_generation_status`は`queued`、`processing`、`completed`、`failed`を返します。`completed`の場合は`image`に生成画像情報を含みます。
 
 ## 9. 担当者相談API
 
@@ -833,7 +841,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 | データ | 現行キー形式 |
 |---|---|
 | アップロードファイル | `uploads/{userId}/{sessionIdまたはunattached}/{uuid}-{safeFilename}` |
-| 生成画像 | `generated/{userId}/...`を取得APIでは許可しているが、生成・保存処理は未実装 |
+| 生成画像 | `generated/{userId}/{sessionId}/{uuid}.png` |
 | 提案PDF | `proposals/{userId}/...`を取得APIでは許可しているが、PDF保存処理は未実装 |
 
 `safeFilename`はパス部分を除去し、英数字・`.`・`_`・`-`のみを残して最大120文字にします。
@@ -857,7 +865,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 
 ## 15. 現行実装で残っている注意点
 
-1. `generate_image`の`type`は確定済みですが、生成処理と生成画像保存は未実装です。
+1. 画像生成はSQS非同期方式で実装済み。DLQに移動したジョブの運用監視は今後追加する。
 2. PDFはブラウザで生成・ダウンロードしており、S3保存APIは未実装です。
 3. フロントエンドの担当者相談フォームは、現状`handoff` APIを呼び出していません。
 4. `save_session`は新しいセッション構造とは別の旧形式です。

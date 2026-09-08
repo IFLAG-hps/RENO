@@ -10,6 +10,7 @@ from boto3.dynamodb.conditions import Attr, Key
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 TABLE = boto3.resource("dynamodb", endpoint_url=AWS_ENDPOINT_URL).Table(os.environ["TABLE_NAME"])
 S3 = boto3.client("s3", endpoint_url=AWS_ENDPOINT_URL)
+SQS = boto3.client("sqs", endpoint_url=AWS_ENDPOINT_URL)
 SES = boto3.client("ses", endpoint_url=AWS_ENDPOINT_URL)
 COGNITO = boto3.client("cognito-idp", endpoint_url=AWS_ENDPOINT_URL)
 USAGE_LIMIT = 10
@@ -197,6 +198,10 @@ def owned_upload_key(user, key):
     return isinstance(key, str) and key.startswith(f"uploads/{user['sub']}/")
 
 
+def owned_proposal_key(user, key):
+    return isinstance(key, str) and key.startswith(f"proposals/{user['sub']}/")
+
+
 def signed_download_url(key):
     return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
 
@@ -217,7 +222,7 @@ def _multipart_file(boundary, name, filename, content_type, value):
     return header + value + b"\r\n"
 
 
-def generate_image(body, user):
+def process_image_generation(body, user, job_id=None):
     session_id = str(body.get("sessionId", "")).strip()
     source_key = str(body.get("sourceImageKey", "")).strip()
     prompt = str(body.get("prompt", "")).strip()[:5000]
@@ -254,7 +259,7 @@ def generate_image(body, user):
     request = Request("https://api.openai.com/v1/images/edits", data=payload,
                       headers={"Authorization": f"Bearer {api_key}", "Content-Type": f"multipart/form-data; boundary={boundary}"}, method="POST")
     try:
-        with urlopen(request, timeout=25) as result: result_payload = json.loads(result.read())
+        with urlopen(request, timeout=120) as result: result_payload = json.loads(result.read())
         generated = (result_payload.get("data") or [{}])[0]
         encoded = generated.get("b64_json")
         if not encoded:
@@ -277,6 +282,70 @@ def generate_image(body, user):
           "prompt": prompt, "created_at": now, "schema_version": 1})
     print(json.dumps({"image_generation_completed": True, "image_id": image_id, "session_id": session_id}, ensure_ascii=False))
     return {"sessionId": session_id, "image": {"id": image_id, "key": generated_key, "downloadUrl": signed_download_url(generated_key), "contentType": "image/png", "createdAt": now}, "usage": usage(user)}
+
+
+def generate_image(body, user):
+    """生成をキューへ登録し、API Gatewayの同期待ち時間を短くする。"""
+    session_id = str(body.get("sessionId", "")).strip()
+    source_key = str(body.get("sourceImageKey", "")).strip()
+    if not session_id or not session_item(user, session_id): return {"error": "session not found"}
+    if not source_key or not owned_upload_key(user, source_key): return {"error": "forbidden photo key"}
+    if not os.environ.get("OPENAI_API_KEY", "").strip(): return {"error": "AI service is not configured"}
+    queue_url = os.environ.get("IMAGE_GENERATION_QUEUE_URL", "").strip()
+    if not queue_url: return {"error": "AI image queue is not configured"}
+    job_id = str(uuid.uuid4())
+    now = int(time.time())
+    item = {"pk": "USER#" + user["sub"], "sk": "IMAGE_JOB#" + job_id, "job_id": job_id,
+            "session_id": session_id, "status": "queued", "created_at": now, "updated_at": now,
+            "schema_version": 1}
+    save(item)
+    message = {"jobId": job_id, "userSub": user["sub"], "sessionId": session_id,
+               "sourceImageKey": source_key, "prompt": str(body.get("prompt", "")).strip()[:5000],
+               "context": body.get("context", [])}
+    try:
+        SQS.send_message(QueueUrl=queue_url, MessageBody=json.dumps(message, ensure_ascii=False))
+    except Exception as exc:
+        TABLE.update_item(Key={"pk": item["pk"], "sk": item["sk"]},
+                          UpdateExpression="SET #status = :status, error = :error, updated_at = :now",
+                          ExpressionAttributeNames={"#status": "status"},
+                          ExpressionAttributeValues={":status": "failed", ":error": "queue unavailable", ":now": int(time.time())})
+        print(json.dumps({"image_generation_queue_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI image queue is temporarily unavailable"}
+    print(json.dumps({"image_generation_queued": True, "job_id": job_id, "session_id": session_id}, ensure_ascii=False))
+    return {"jobId": job_id, "status": "queued", "sessionId": session_id}
+
+
+def image_generation_status(body, user):
+    job_id = str(body.get("jobId", "")).strip()
+    if not job_id: return {"error": "jobId is required"}
+    item = TABLE.get_item(Key={"pk": "USER#" + user["sub"], "sk": "IMAGE_JOB#" + job_id}).get("Item")
+    if not item: return {"error": "image generation job not found"}
+    result = {"jobId": job_id, "status": item.get("status", "queued"), "sessionId": item.get("session_id")}
+    if item.get("status") == "completed": result["image"] = item.get("image")
+    if item.get("status") == "failed": result["error"] = item.get("error", "AI image generation failed")
+    return result
+
+
+def image_generation_worker(event):
+    for record in event.get("Records", []):
+        message = json.loads(record.get("body", "{}"))
+        job_id = str(message.get("jobId", "")).strip()
+        user = {"sub": str(message.get("userSub", "")).strip()}
+        if not job_id or not user["sub"]: continue
+        key = {"pk": "USER#" + user["sub"], "sk": "IMAGE_JOB#" + job_id}
+        TABLE.update_item(Key=key, UpdateExpression="SET #status = :status, updated_at = :now",
+                          ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "processing", ":now": int(time.time())})
+        try:
+            result = process_image_generation(message, user, job_id)
+            if "error" in result: raise RuntimeError(result["error"])
+            TABLE.update_item(Key=key, UpdateExpression="SET #status = :status, image = :image, updated_at = :now",
+                              ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "completed", ":image": result["image"], ":now": int(time.time())})
+        except Exception as exc:
+            TABLE.update_item(Key=key, UpdateExpression="SET #status = :status, error = :error, updated_at = :now",
+                              ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "failed", ":error": str(exc)[:500], ":now": int(time.time())})
+            print(json.dumps({"image_generation_worker_error": str(exc), "job_id": job_id}, ensure_ascii=False))
+            raise
+    return {"ok": True}
 
 
 def attach_photo(user, session_id, key, filename, content_type, room_type=""):
@@ -669,6 +738,8 @@ def material_recommendation(body, user):
 
 def lambda_handler(event, context):
     try:
+        if event.get("Records"):
+            return image_generation_worker(event)
         method = event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod")
         if method == "OPTIONS": return response(204, {})
         body = json.loads(event.get("body") or "{}")
@@ -764,6 +835,41 @@ def lambda_handler(event, context):
             key = f"uploads/{user['sub']}/{session_id or 'unattached'}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
             return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "create_proposal_upload_url":
+            content_type = str(body.get("content_type", "application/pdf")).lower()
+            if content_type != "application/pdf": return response(400, {"error": "PDF content type is required"})
+            session_id = str(body.get("sessionId", "")).strip()
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            proposal_id = str(uuid.uuid4())
+            key = f"proposals/{user['sub']}/{session_id or 'unattached'}/{proposal_id}.pdf"
+            url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
+            return response(200, {"proposal_id": proposal_id, "key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "save_proposal":
+            key = str(body.get("key", "")).strip()
+            session_id = str(body.get("sessionId", "")).strip()
+            if not owned_proposal_key(user, key): return response(403, {"error": "forbidden proposal key"})
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            try:
+                metadata = S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+            except Exception:
+                return response(404, {"error": "proposal not found"})
+            proposal_id = posixpath.splitext(posixpath.basename(key))[0]
+            now = int(time.time())
+            item = {"pk": "USER#" + user["sub"], "sk": "PROPOSAL#" + proposal_id, "id": proposal_id,
+                    "session_id": session_id, "s3_key": key, "filename": safe_filename(body.get("filename", "RENO-proposal.pdf")),
+                    "content_type": "application/pdf", "size": int(metadata.get("ContentLength", 0)),
+                    "created_at": now, "schema_version": 1}
+            save(item)
+            return response(201, {"proposal": {"id": proposal_id, "sessionId": session_id, "key": key,
+                                                 "filename": item["filename"], "size": item["size"],
+                                                 "downloadUrl": signed_download_url(key), "createdAt": now}})
+        if typ == "get_proposals":
+            session_id = str(body.get("sessionId", "")).strip()
+            proposals = [item for item in query_user(user, "PROPOSAL#") if not session_id or item.get("session_id") == session_id]
+            return response(200, {"proposals": [{"id": item.get("id"), "sessionId": item.get("session_id", ""),
+                                                   "filename": item.get("filename", "RENO-proposal.pdf"),
+                                                   "size": int(item.get("size", 0)), "createdAt": item.get("created_at"),
+                                                   "downloadUrl": signed_download_url(item["s3_key"])} for item in proposals]})
         if typ == "save_photo":
             photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"), body.get("room_type", ""))
             if error == "session not found": return response(404, {"error": error})
@@ -781,6 +887,10 @@ def lambda_handler(event, context):
         if typ == "generate_image":
             result = generate_image(body, user)
             status = 200 if "error" not in result else (404 if result["error"] in {"session not found", "uploaded object not found"} else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
+        if typ == "image_generation_status":
+            result = image_generation_status(body, user)
+            status = 200 if "error" not in result else 404
             return response(status, result)
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
@@ -831,4 +941,6 @@ def lambda_handler(event, context):
         return response(400, {"error": "unsupported type"})
     except Exception as exc:
         print(json.dumps({"error": str(exc), "request_id": getattr(context, "aws_request_id", "")}, ensure_ascii=False))
+        if event.get("Records"):
+            raise
         return response(500, {"error": "internal error"})

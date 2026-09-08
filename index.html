@@ -3238,8 +3238,21 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
       document.getElementById('pdf-notes-block').style.display = 'none';
     }
 
-    // 3. Wait for images to load
-    await new Promise(r => setTimeout(r, 600));
+    // 3. 画像の読み込み完了を待ってからhtml2canvasへ渡す。
+    // setTimeoutだけでは、S3署名URLや大きなdata URLの画像が未描画のまま
+    // キャプチャされることがあるため、実際のdecode完了を確認する。
+    const waitForImageReady = image => {
+      if (!image?.src) return Promise.resolve();
+      if (image.complete && image.naturalWidth > 0) {
+        return typeof image.decode === 'function' ? image.decode().catch(() => {}) : Promise.resolve();
+      }
+      return new Promise(resolve => {
+        const finish = () => { image.onload = null; image.onerror = null; resolve(); };
+        image.onload = finish;
+        image.onerror = finish;
+      });
+    };
+    await Promise.all([waitForImageReady(beforeImage), waitForImageReady(afterImage)]);
 
     // 4. html2canvas → jsPDF
     const canvas = await html2canvas(tmpl.firstElementChild, {
@@ -3274,7 +3287,40 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
       }
     }
 
-    doc.save(`RENO-ai-提案書-${Date.now()}.pdf`);
+    const filename = `RENO-ai-提案書-${Date.now()}.pdf`;
+    let savedProposal = null;
+    // 認証済みの場合は、PDF本体を署名付きURLでS3へ保存して履歴に登録する。
+    // API未接続のデモモードでは従来どおりブラウザ保存だけを行う。
+    if (EDGE_URL && sessionToken) {
+      const pdfBlob = doc.output('blob');
+      const uploadInfoRes = await fetchWithTimeout(EDGE_URL, {
+        method: 'POST',
+        headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken, type: 'create_proposal_upload_url', content_type: 'application/pdf', filename })
+      }, 30000);
+      const uploadInfo = await uploadInfoRes.json();
+      if (!uploadInfoRes.ok || !uploadInfo.upload_url || !uploadInfo.key) {
+        throw new Error(uploadInfo.error || 'PDFの保存先を作成できませんでした');
+      }
+      const uploadRes = await fetchWithTimeout(uploadInfo.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: pdfBlob
+      }, 30000);
+      if (!uploadRes.ok) throw new Error('PDFをS3へ保存できませんでした');
+
+      const saveRes = await fetchWithTimeout(EDGE_URL, {
+        method: 'POST',
+        headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken, type: 'save_proposal', key: uploadInfo.key, filename, content_type: 'application/pdf', size: pdfBlob.size })
+      }, 30000);
+      const saveData = await saveRes.json();
+      if (!saveRes.ok || !saveData.proposal) throw new Error(saveData.error || 'PDFの保存記録を作成できませんでした');
+      savedProposal = saveData.proposal;
+    }
+    // S3保存後も、利用者がその場で確認できるようローカルダウンロードを開始する。
+    doc.save(filename);
+    window._lastProposal = savedProposal;
     if (typeof onComplete === 'function') onComplete();
 
   } catch(e) {

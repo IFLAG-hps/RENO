@@ -215,6 +215,42 @@ class LocalStackHandlerTest(unittest.TestCase):
             self.assertIsNotNone(subject)
             self.assertEqual(subject["sub"], f"token-roundtrip-{index}")
 
+    def test_proposal_pdf_is_saved_to_s3_and_can_be_retrieved(self):
+        token = self.handler.token_for("proposal-storage-test")
+        create = self.handler.lambda_handler({"body": json.dumps({
+            "type": "create_proposal_upload_url",
+            "token": token,
+            "filename": "proposal.pdf",
+            "content_type": "application/pdf",
+        })}, None)
+        self.assertEqual(create["statusCode"], 200)
+        upload = json.loads(create["body"])
+        self.assertTrue(upload["key"].startswith("proposals/proposal-storage-test/"))
+
+        pdf_bytes = b"%PDF-1.4 localstack test"
+        self.s3.put_object(Bucket=BUCKET_NAME, Key=upload["key"], Body=pdf_bytes, ContentType="application/pdf")
+
+        saved = self.handler.lambda_handler({"body": json.dumps({
+            "type": "save_proposal",
+            "token": token,
+            "key": upload["key"],
+            "filename": "proposal.pdf",
+            "content_type": "application/pdf",
+            "size": len(pdf_bytes),
+        })}, None)
+        self.assertEqual(saved["statusCode"], 201)
+        proposal = json.loads(saved["body"])["proposal"]
+        self.assertEqual(proposal["size"], len(pdf_bytes))
+        self.assertTrue(proposal["downloadUrl"])
+
+        listed = self.handler.lambda_handler({"body": json.dumps({
+            "type": "get_proposals",
+            "token": token,
+        })}, None)
+        self.assertEqual(listed["statusCode"], 200)
+        proposals = json.loads(listed["body"])["proposals"]
+        self.assertTrue(any(item["id"] == proposal["id"] for item in proposals))
+
 
 if __name__ == "__main__":
     unittest.main()
