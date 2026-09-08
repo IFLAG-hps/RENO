@@ -34,6 +34,7 @@ Fork先リポジトリ（`DaisukeShirai/RENO`）の **Settings > Environments** 
 ### Variables
 
 - `ADMIN_EMAIL`
+- `DEMO_PIN`
 - `UNLIMITED_MODE`
 - `OPENAI_MODEL`
 - `SES_FROM_EMAIL`

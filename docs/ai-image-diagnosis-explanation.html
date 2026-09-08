@@ -47,7 +47,7 @@ ul { margin-top: 3mm; }
 <section class="page">
   <div class="eyebrow">01 / POSITIONING</div>
   <h2>画像から判定できる範囲を限定する</h2>
-  <div class="quote">「おおむね劣化している／明らかな劣化は見られない」は、現地調査の結果ではなく、写真から見える状態に基づくAIの参考判定。</div>
+  <div class="quote">「経年劣化 中」「劣化 大」は、現地調査の結果ではなく、写真から見える状態に基づくAIの参考判定。</div>
   <div class="cols">
     <div class="box good"><h3>画像で扱いやすいもの</h3><ul><li>壁紙の浮き・剥がれ・黄ばみ</li><li>床の擦り傷・へこみ・変色</li><li>建具の色あせ・傷</li><li>シミ・黒ずみなどの外観</li></ul></div>
     <div class="box bad"><h3>画像だけでは断定しないもの</h3><ul><li>劣化の正確な年数・原因</li><li>内部の腐食・漏水</li><li>安全性・修繕の緊急度</li><li>正確な工事費</li></ul></div>
@@ -64,7 +64,7 @@ ul { margin-top: 3mm; }
     <div class="step"><strong>画像解析</strong>ひび割れや変状を検出・分類・計測</div><div class="arrow">→</div>
     <div class="step"><strong>人が確認</strong>AI結果を点検者が確認し、最終判断に利用</div>
   </div>
-  <div class="accent"><strong>RENOへの示唆</strong><br>住宅内装でも「部材」「見える状態」「劣化の有無」を出す設計は可能。ただし、最終的な施工判断は現地確認につなげる。</div>
+  <div class="accent"><strong>RENOへの示唆</strong><br>住宅内装でも「部材」「見える状態」「劣化度の目安」を出す設計は可能。ただし、最終的な施工判断は現地確認につなげる。</div>
   <div class="footer"><span>出典：国土交通省 技術資料・点検支援事例</span><span>3</span></div>
 </section>
 
@@ -76,14 +76,14 @@ ul { margin-top: 3mm; }
     <div class="step"><strong>2. AI分析</strong>LambdaがS3画像をOpenAIへ渡し、診断結果を取得</div><div class="arrow">→</div>
     <div class="step"><strong>3. 次の提案</strong>素材提案・概算・施工後イメージへ連携</div>
   </div>
-  <table><tr><th>画面表示</th><th>例</th></tr><tr><td>対象部材</td><td>壁紙（クロス）、床材、建具（ドア枠）</td></tr><tr><td>状態説明</td><td>継ぎ目の浮き・黄ばみが見られます</td></tr><tr><td>劣化の有無</td><td>おおむね劣化している / 明らかな劣化は見られない</td></tr><tr><td>注意書き</td><td>AIによる参考判定。現地確認で結果が変わる場合があります。</td></tr></table>
+  <table><tr><th>画面表示</th><th>例</th></tr><tr><td>対象部材</td><td>壁紙（クロス）、床材、建具（ドア枠）</td></tr><tr><td>状態説明</td><td>継ぎ目の浮き・黄ばみが見られます</td></tr><tr><td>劣化度</td><td>軽度 / 中度 / 重度</td></tr><tr><td>注意書き</td><td>AIによる参考判定。現地確認で結果が変わる場合があります。</td></tr></table>
   <div class="footer"><span>現在の実装対象：analyze_photo</span><span>4</span></div>
 </section>
 
 <section class="page">
   <div class="eyebrow">04 / OPEN DECISIONS</div>
   <h2>正式仕様として、ここは相談して決めたい</h2>
-  <table><tr><th>論点</th><th>決める内容</th><th>推奨案</th></tr><tr><td>対象範囲</td><td>診断する部材と最大件数</td><td>内装3〜5項目から開始</td></tr><tr><td>劣化の有無</td><td>写真から劣化していると見えるか</td><td>具体的な段階評価は行わず、2段階で参考表示</td></tr><tr><td>信頼度</td><td>confidenceを表示・保存するか</td><td>内部保存し、低信頼時は注意表示</td></tr><tr><td>連携</td><td>概算・生成の入力に使うか</td><td>提案の補助情報として利用</td></tr><tr><td>最終判断</td><td>現地確認への誘導</td><td>必ず参考判定と明記</td></tr></table>
+  <table><tr><th>論点</th><th>決める内容</th><th>推奨案</th></tr><tr><td>対象範囲</td><td>診断する部材と最大件数</td><td>内装3〜5項目から開始</td></tr><tr><td>劣化度</td><td>軽度・中度・重度の基準</td><td>画像上の見え方による相対評価</td></tr><tr><td>信頼度</td><td>confidenceを表示・保存するか</td><td>内部保存し、低信頼時は注意表示</td></tr><tr><td>連携</td><td>概算・生成の入力に使うか</td><td>提案の補助情報として利用</td></tr><tr><td>最終判断</td><td>現地確認への誘導</td><td>必ず参考判定と明記</td></tr></table>
   <div class="accent"><strong>合意事項</strong><br>診断は「施工判断」ではなく、「ユーザーが次の相談行動を選ぶための補助情報」として位置付ける。</div>
   <div class="footer"><span>RENO 画像AI診断 要件説明</span><span>5</span></div>
 </section>
@@ -92,7 +92,7 @@ ul { margin-top: 3mm; }
   <div class="eyebrow">05 / PROPOSAL</div>
   <h2>まずは、検証可能な最小仕様で進める</h2>
   <div class="cols">
-    <div class="box good"><h3>今回のMVP</h3><ul><li>S3上の写真をAIへ渡す</li><li>部材・状態・劣化の有無をJSONで取得</li><li>画面に参考判定として表示</li><li>DynamoDBの写真レコードへ保存</li></ul></div>
+    <div class="box good"><h3>今回のMVP</h3><ul><li>S3上の写真をAIへ渡す</li><li>部材・状態・劣化度をJSONで取得</li><li>画面に参考判定として表示</li><li>DynamoDBの写真レコードへ保存</li></ul></div>
     <div class="box warn"><h3>後続で拡張</h3><ul><li>信頼度・再分析履歴</li><li>判定基準のチューニング</li><li>概算・生成への自動連携</li><li>人による確認フロー</li></ul></div>
   </div>
   <div class="accent"><strong>次のアクション</strong><br>合意した位置付けと出力項目で、dev環境に実装を反映し、実画像を使った表示・失敗時・自然言語指定の検証へ進む。</div>

@@ -70,6 +70,7 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 | type | 用途 | 認証 | 成功ステータス |
 |---|---|---:|---:|
 | `demo_login` | デモセッション開始 | 不要 | 200 |
+| `verify_pin` | ゲストPIN認証 | 不要 | 200 |
 | `cognito_login` | 管理者Cognito認証 | 不要 | 200 |
 | `create_session` | 相談セッション作成 | 必要 | 201 |
 | `chat` | AIチャット | 必要 | 200 |
@@ -88,13 +89,14 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 | `create_download_url` | S3署名付きGET URL発行 | 必要 | 200 |
 | `generate_image` | 現在の写真をもとに生成画像を作成 | 必要 | 200 |
 | `handoff` | 担当者相談受付 | 必要 | 200 |
+| `create_guest_pin` | ゲストPIN発行 | 管理者のみ | 200 |
+| `get_guest_pins` | ゲストPIN一覧取得 | 管理者のみ | 200 |
+| `delete_guest_pin` | ゲストPIN削除 | 管理者のみ | 200 |
 | `save_case` | 施工事例保存 | 必要 | 200 |
 | `get_cases` | 施工事例一覧取得 | 必要 | 200 |
 | `delete_case` | 施工事例削除 | 必要 | 200 |
 
 ## 4. 認証API
-
-ゲストPIN認証およびゲストPINの発行・管理は廃止する。今後の実装・テスト対象にも含めない。利用開始時にPIN入力を求めず、必要な認証・認可は管理者機能や保護対象APIごとに別途適用する。
 
 ### 認証方式の決定事項
 
@@ -128,6 +130,29 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
   "label": "デモ"
 }
 ```
+
+### verify_pin
+
+リクエスト:
+
+```json
+{
+  "type": "verify_pin",
+  "pin": "1234"
+}
+```
+
+レスポンス:
+
+```json
+{
+  "token": "string",
+  "role": "guest",
+  "label": "string"
+}
+```
+
+失敗時は`401 {"error":"invalid pin"}`です。
 
 ### cognito_login
 
@@ -255,8 +280,8 @@ OpenAIキー未設定時は固定フォールバック文を返します。OpenA
 {
   "plan": "standard",
   "count": 0,
-    "limit": null,
-    "remaining": null,
+  "limit": 10,
+  "remaining": 10,
   "unlimited": false
 }
 ```
@@ -457,7 +482,7 @@ OpenAIキー未設定時は固定フォールバック文を返します。OpenA
   "photoId":"uuid",
   "analysis":{
     "items":[
-      {"name":"壁紙（クロス）","finding":"継ぎ目の浮き・黄ばみが見られます","degraded":true}
+      {"name":"壁紙（クロス）","finding":"継ぎ目の浮き・黄ばみが見られます","severity":"中度"}
     ],
     "summary":"優先すべき対応の説明",
     "source":"ai"
@@ -634,7 +659,50 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 {"ok":true,"status":"received"}
 ```
 
-## 10. 施工事例API
+## 10. 管理者PIN API
+
+### create_guest_pin
+
+リクエスト:
+
+```json
+{"type":"create_guest_pin","token":"admin-token","label":"デモ用","days":7,"max_uses":30}
+```
+
+- `days`: 1〜30日に制限
+- `max_uses`: 1〜100回に制限
+
+レスポンス:
+
+```json
+{"pin":"1234","label":"デモ用","max_uses":30,"expires_at":1710000000000}
+```
+
+### get_guest_pins
+
+レスポンスはPIN情報の配列です。
+
+```json
+[
+  {"id":"1234","pin":"1234","label":"デモ用","use_count":0,"max_uses":30,"expires_at":1710000000000,"is_active":true}
+]
+```
+
+### delete_guest_pin
+
+リクエスト:
+
+```json
+{"type":"delete_guest_pin","token":"admin-token","id":"1234"}
+```
+
+レスポンス:
+
+```json
+{"ok":true}
+```
+
+## 11. 施工事例API
 
 ### save_case
 
@@ -686,7 +754,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 {"ok":true}
 ```
 
-## 11. 保存データ形式
+## 12. 保存データ形式
 
 ### DynamoDB共通
 
@@ -760,7 +828,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 
 `pk=USER#{userId}`、`sk=CASE#{uuid}`で保存します。
 
-## 12. S3キー形式
+## 13. S3キー形式
 
 | データ | 現行キー形式 |
 |---|---|
@@ -770,7 +838,7 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 
 `safeFilename`はパス部分を除去し、英数字・`.`・`_`・`-`のみを残して最大120文字にします。
 
-## 13. HTTPステータス一覧
+## 14. HTTPステータス一覧
 
 | ステータス | 現行の意味 |
 |---:|---|
@@ -778,16 +846,16 @@ LambdaがS3の`head_object`でアップロード済みオブジェクトを確�
 | 201 | セッション・写真の作成成功 |
 | 204 | CORSのOPTIONS応答 |
 | 400 | 入力不正、未対応`type`、必須項目不足 |
-| 401 | 認証失敗、Cognitoセッション不正 |
+| 401 | 認証失敗、PIN不正、Cognitoセッション不正 |
 | 403 | 所有権違反、管理者権限不足 |
-| 404 | セッション・写真・事例が存在しない |
+| 404 | セッション・写真・PIN・事例が存在しない |
 | 409 | アーカイブ済みセッションへの操作 |
 | 413 | 施工事例画像データが大きすぎる |
 | 429 | チャット利用上限超過 |
 | 503 | OpenAIが一時利用不可 |
 | 500 | 想定外例外 |
 
-## 14. 現行実装で残っている注意点
+## 15. 現行実装で残っている注意点
 
 1. `generate_image`の`type`は確定済みですが、生成処理と生成画像保存は未実装です。
 2. PDFはブラウザで生成・ダウンロードしており、S3保存APIは未実装です。

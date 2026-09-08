@@ -1,26 +1,77 @@
-name: "PROD: Deploy backend to AWS (SAM)"
+name: "DEPLOY: Fork environment backend (SAM)"
 
 on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
   workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target. Run this from the matching branch.
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
 
 permissions:
   contents: read
 
-env:
-  AWS_REGION: ap-northeast-1
-  STACK_NAME: reno-mvp
-
 jobs:
+  prepare:
+    name: Validate target and deployment branch
+    if: github.repository == 'DaisukeShirai/RENO'
+    runs-on: ubuntu-latest
+    outputs:
+      cloudformation_environment: ${{ steps.target.outputs.cloudformation_environment }}
+      github_environment: ${{ steps.target.outputs.github_environment }}
+      stack_name: ${{ steps.target.outputs.stack_name }}
+    steps:
+      - id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET: ${{ inputs.target }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            case "$REF_NAME" in
+              dev) TARGET=dev ;;
+              staging) TARGET=staging ;;
+              main) TARGET=production ;;
+              *) echo "Unsupported push branch: $REF_NAME"; exit 1 ;;
+            esac
+          else
+            TARGET="$INPUT_TARGET"
+          fi
+
+          case "$TARGET:$REF_NAME" in
+            dev:dev) CFN_ENV=dev; STACK=reno-mvp-dev ;;
+            staging:staging) CFN_ENV=staging; STACK=reno-mvp-staging ;;
+            production:main) CFN_ENV=production; STACK=reno-mvp-prod ;;
+            *) echo "Deploy $TARGET must run from its matching branch. Current branch: $REF_NAME"; exit 1 ;;
+          esac
+
+          echo "cloudformation_environment=$CFN_ENV" >> "$GITHUB_OUTPUT"
+          echo "github_environment=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "stack_name=$STACK" >> "$GITHUB_OUTPUT"
+
   localstack-test:
     name: Pre-deploy LocalStack tests
+    needs: prepare
     uses: ./.github/workflows/localstack-test.yml
 
   deploy:
     name: Deploy backend stack
-    needs: localstack-test
-    if: github.ref == 'refs/heads/main'
+    needs: [prepare, localstack-test]
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ needs.prepare.outputs.github_environment }}
+    env:
+      AWS_REGION: ap-northeast-1
+      STACK_NAME: ${{ needs.prepare.outputs.stack_name }}
+      DEPLOYMENT_ENVIRONMENT: ${{ needs.prepare.outputs.cloudformation_environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,13 +87,11 @@ jobs:
         uses: aws-actions/setup-sam@v2
 
       - name: Validate and build backend
-        # デプロイ前にSAMテンプレートを検証し、Lambda用の成果物を作成する。
         run: |
           sam validate --template-file backend/template.yaml --lint
           sam build --template-file backend/template.yaml
 
       - name: Deploy backend resources
-        # OpenAIキーとトークン秘密鍵はLambdaにだけ渡し、フロントへ出力しない。
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
@@ -55,7 +104,15 @@ jobs:
         run: |
           test -n "$OPENAI_API_KEY"
           test -n "$TOKEN_SECRET"
+          case "$DEPLOYMENT_ENVIRONMENT" in
+            dev) LAMBDA_EXECUTION_ROLE_NAME=RENODevLambdaExecutionRole ;;
+            staging) LAMBDA_EXECUTION_ROLE_NAME=RENOStagingLambdaExecutionRole ;;
+            production) LAMBDA_EXECUTION_ROLE_NAME=RENOProductionLambdaExecutionRole ;;
+            *) echo "Unsupported deployment environment: $DEPLOYMENT_ENVIRONMENT"; exit 1 ;;
+          esac
           PARAM_OVERRIDES=(
+            "Environment=$DEPLOYMENT_ENVIRONMENT"
+            "LambdaExecutionRoleName=$LAMBDA_EXECUTION_ROLE_NAME"
             "OpenAIApiKey=$OPENAI_API_KEY"
             "OpenAIModel=$OPENAI_MODEL"
             "TokenSecret=$TOKEN_SECRET"
@@ -63,7 +120,6 @@ jobs:
             "UnlimitedMode=$UNLIMITED_MODE"
           )
           if [ -n "$ADMIN_EMAIL" ]; then PARAM_OVERRIDES+=("AdminEmail=$ADMIN_EMAIL"); fi
-          # SES未使用時は空のパラメータを渡さず、テンプレートの既定値を使う。
           if [ -n "$SES_FROM_EMAIL" ]; then PARAM_OVERRIDES+=("SesFromEmail=$SES_FROM_EMAIL"); fi
           if [ -n "$SES_TO_EMAIL" ]; then PARAM_OVERRIDES+=("SesToEmail=$SES_TO_EMAIL"); fi
           sam deploy \
@@ -74,13 +130,13 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
+            --tags "Environment=$DEPLOYMENT_ENVIRONMENT" \
             --parameter-overrides "${PARAM_OVERRIDES[@]}"
 
-      - name: Show backend API URL
-        # CloudFrontの更新は行わず、接続確認用にAPI URLだけ表示する。
+      - name: Show environment outputs
         run: |
           aws cloudformation describe-stacks \
             --stack-name "$STACK_NAME" \
             --region "$AWS_REGION" \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text
+            --query "Stacks[0].Outputs[].[OutputKey,OutputValue]" \
+            --output table

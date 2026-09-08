@@ -19,8 +19,13 @@ Globals:
         ADMIN_EMAIL: !Ref AdminEmail
         DEMO_PIN: !Ref DemoPin
         UNLIMITED_MODE: !Ref UnlimitedMode
+        DEPLOYMENT_ENVIRONMENT: !Ref Environment
 
 Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, production]
+    Description: Deployment environment used to isolate the stack resources.
   OpenAIApiKey:
     Type: String
     NoEcho: true
@@ -48,6 +53,10 @@ Parameters:
     Type: String
     AllowedValues: ['true', 'false']
     Default: 'true'
+  LambdaExecutionRoleName:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]+$'
+    Description: Existing environment-specific IAM role name used by the Lambda function.
 
 Resources:
   RenoApi:
@@ -65,16 +74,7 @@ Resources:
       CodeUri: src/
       Handler: handler.lambda_handler
       ReservedConcurrentExecutions: 2
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RenoTable
-        - S3CrudPolicy:
-            BucketName: !Ref RenoAssetBucket
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ses:SendEmail
-              Resource: '*'
+      Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LambdaExecutionRoleName}
       Events:
         Api:
           Type: Api
@@ -99,6 +99,9 @@ Resources:
           KeyType: RANGE
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
 
   RenoAssetBucket:
     Type: AWS::S3::Bucket
@@ -112,11 +115,14 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
 
   RenoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: reno-mvp-users
+      UserPoolName: !Sub reno-mvp-${Environment}-users
       AutoVerifiedAttributes: [email]
       UsernameAttributes: [email]
       MfaConfiguration: OPTIONAL
@@ -128,7 +134,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref RenoUserPool
-      ClientName: reno-mvp-web
+      ClientName: !Sub reno-mvp-${Environment}-web
       GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
@@ -149,3 +155,5 @@ Outputs:
     Value: !Ref RenoUserPoolClient
   AssetBucket:
     Value: !Ref RenoAssetBucket
+  DeploymentEnvironment:
+    Value: !Ref Environment

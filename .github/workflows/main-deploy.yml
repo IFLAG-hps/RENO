@@ -1,15 +1,22 @@
-name: "CI: Test and optionally deploy backend"
+name: "CI: Validate application"
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to validate
+        required: true
+        type: string
   push:
     branches:
       - main
-      - feature/makeActions
-      - feature/mvp
+      - staging
+      - dev
   pull_request:
     branches:
       - main
-      - feature/mvp
+      - staging
+      - dev
   workflow_dispatch:
     inputs:
       deploy_aws:
@@ -32,6 +39,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -115,7 +124,7 @@ jobs:
     name: Optional deploy to AWS (manual)
     needs: test
     # AWS更新は手動実行で明示的に許可した場合だけ行う。
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy_aws == true
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -145,6 +154,7 @@ jobs:
           --no-confirm-changeset
           --no-fail-on-empty-changeset
           --parameter-overrides
+          LambdaExecutionRoleName=RENOProductionLambdaExecutionRole
           OpenAIApiKey="${{ secrets.OPENAI_API_KEY }}"
           OpenAIModel="${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}"
           TokenSecret="${{ secrets.TOKEN_SECRET }}"

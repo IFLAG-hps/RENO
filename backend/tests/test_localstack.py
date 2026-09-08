@@ -115,6 +115,51 @@ class LocalStackHandlerTest(unittest.TestCase):
             else:
                 os.environ["OPENAI_API_KEY"] = previous_key
 
+    def test_session_can_be_created_listed_reopened_and_extended(self):
+        previous_key = os.environ.get("OPENAI_API_KEY")
+        try:
+            os.environ["OPENAI_API_KEY"] = "   "
+            token = self.handler.token_for("session-history-test")
+            create = self.handler.lambda_handler({"body": json.dumps({
+                "type": "create_session",
+                "token": token,
+            })}, None)
+            self.assertEqual(create["statusCode"], 201)
+            session = json.loads(create["body"])["session"]
+            self.assertEqual(session["status"], "active")
+            session_id = session["sessionId"]
+
+            chat = self.handler.lambda_handler({"body": json.dumps({
+                "type": "chat",
+                "token": token,
+                "sessionId": session_id,
+                "messages": [{"role": "user", "content": "浴室を相談したい"}],
+            }, ensure_ascii=False)}, None)
+            self.assertEqual(chat["statusCode"], 200)
+            self.assertEqual(json.loads(chat["body"])["sessionId"], session_id)
+
+            listed = self.handler.lambda_handler({"body": json.dumps({
+                "type": "get_sessions",
+                "token": token,
+            })}, None)
+            self.assertEqual(listed["statusCode"], 200)
+            self.assertTrue(any(item["sessionId"] == session_id for item in json.loads(listed["body"])["sessions"]))
+
+            reopened = self.handler.lambda_handler({"body": json.dumps({
+                "type": "get_session",
+                "token": token,
+                "sessionId": session_id,
+            })}, None)
+            self.assertEqual(reopened["statusCode"], 200)
+            messages = json.loads(reopened["body"])["session"]["messages"]
+            self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
+            self.assertEqual(messages[0]["content"], "浴室を相談したい")
+        finally:
+            if previous_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = previous_key
+
     def test_estimate_returns_server_side_cost_and_duration(self):
         previous_key = os.environ.get("OPENAI_API_KEY")
         try:

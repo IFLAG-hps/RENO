@@ -1,0 +1,47 @@
+name: "PROMOTE: Merge tested issue branch to main"
+
+on:
+  workflow_run:
+    workflows:
+      - "SYNC: Mirror tested issue branches to fork"
+    types:
+      - completed
+    branches:
+      - '[1-9]*-*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Validate synchronized issue branch
+    if: >-
+      ${{ github.repository == 'IFLAG-hps/RENO'
+          && github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.event == 'push' }}
+    uses: ./.github/workflows/main-deploy.yml
+    with:
+      ref: ${{ github.event.workflow_run.head_sha }}
+
+  merge:
+    name: Merge validated issue branch into main
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout validated issue branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Merge issue branch into main
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          case "$BRANCH" in [1-9]*-*) ;; *) echo "Unexpected branch: $BRANCH"; exit 1 ;; esac
+          git fetch origin main "$BRANCH"
+          git switch --create origin-main --track origin/main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-ff "origin/$BRANCH" -m "Merge branch '$BRANCH' into main"
+          git push origin HEAD:refs/heads/main
