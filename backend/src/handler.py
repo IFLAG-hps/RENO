@@ -197,6 +197,10 @@ def owned_upload_key(user, key):
     return isinstance(key, str) and key.startswith(f"uploads/{user['sub']}/")
 
 
+def owned_proposal_key(user, key):
+    return isinstance(key, str) and key.startswith(f"proposals/{user['sub']}/")
+
+
 def signed_download_url(key):
     return S3.generate_presigned_url("get_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key}, ExpiresIn=900)
 
@@ -764,6 +768,41 @@ def lambda_handler(event, context):
             key = f"uploads/{user['sub']}/{session_id or 'unattached'}/{uuid.uuid4().hex}-{safe_filename(body.get('filename'))}"
             url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
             return response(200, {"key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "create_proposal_upload_url":
+            content_type = str(body.get("content_type", "application/pdf")).lower()
+            if content_type != "application/pdf": return response(400, {"error": "PDF content type is required"})
+            session_id = str(body.get("sessionId", "")).strip()
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            proposal_id = str(uuid.uuid4())
+            key = f"proposals/{user['sub']}/{session_id or 'unattached'}/{proposal_id}.pdf"
+            url = S3.generate_presigned_url("put_object", Params={"Bucket": os.environ["ASSET_BUCKET"], "Key": key, "ContentType": content_type}, ExpiresIn=900)
+            return response(200, {"proposal_id": proposal_id, "key": key, "upload_url": url, "content_type": content_type, "expires_in": 900})
+        if typ == "save_proposal":
+            key = str(body.get("key", "")).strip()
+            session_id = str(body.get("sessionId", "")).strip()
+            if not owned_proposal_key(user, key): return response(403, {"error": "forbidden proposal key"})
+            if session_id and not session_item(user, session_id): return response(404, {"error": "session not found"})
+            try:
+                metadata = S3.head_object(Bucket=os.environ["ASSET_BUCKET"], Key=key)
+            except Exception:
+                return response(404, {"error": "proposal not found"})
+            proposal_id = posixpath.splitext(posixpath.basename(key))[0]
+            now = int(time.time())
+            item = {"pk": "USER#" + user["sub"], "sk": "PROPOSAL#" + proposal_id, "id": proposal_id,
+                    "session_id": session_id, "s3_key": key, "filename": safe_filename(body.get("filename", "RENO-proposal.pdf")),
+                    "content_type": "application/pdf", "size": int(metadata.get("ContentLength", 0)),
+                    "created_at": now, "schema_version": 1}
+            save(item)
+            return response(201, {"proposal": {"id": proposal_id, "sessionId": session_id, "key": key,
+                                                 "filename": item["filename"], "size": item["size"],
+                                                 "downloadUrl": signed_download_url(key), "createdAt": now}})
+        if typ == "get_proposals":
+            session_id = str(body.get("sessionId", "")).strip()
+            proposals = [item for item in query_user(user, "PROPOSAL#") if not session_id or item.get("session_id") == session_id]
+            return response(200, {"proposals": [{"id": item.get("id"), "sessionId": item.get("session_id", ""),
+                                                   "filename": item.get("filename", "RENO-proposal.pdf"),
+                                                   "size": int(item.get("size", 0)), "createdAt": item.get("created_at"),
+                                                   "downloadUrl": signed_download_url(item["s3_key"])} for item in proposals]})
         if typ == "save_photo":
             photo, error = attach_photo(user, str(body.get("sessionId", "")).strip(), str(body.get("key", "")).strip(), body.get("filename"), body.get("content_type", "image/jpeg"), body.get("room_type", ""))
             if error == "session not found": return response(404, {"error": error})

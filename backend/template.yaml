@@ -110,6 +110,12 @@ Resources:
   RenoAssetBucket:
     Type: AWS::S3::Bucket
     Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD, PUT]
+            AllowedOrigins: ['*']
+            ExposedHeaders: [ETag]
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
