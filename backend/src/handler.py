@@ -279,15 +279,43 @@ def analyze_photo(body, user):
     try:
         with urlopen(request, timeout=30) as result:
             payload = json.loads(result.read())
+        output = payload.get("output", [])
+        output_summary = []
+        if isinstance(output, list):
+            for entry in output[:10]:
+                if isinstance(entry, dict):
+                    content = entry.get("content", [])
+                    output_summary.append({
+                        "type": entry.get("type"),
+                        "content_types": [part.get("type") for part in content[:10] if isinstance(part, dict)] if isinstance(content, list) else [],
+                        "has_text": any(isinstance(part, dict) and isinstance(part.get("text"), str) for part in content) if isinstance(content, list) else False,
+                    })
+        print(json.dumps({
+            "openai_analysis_response": {
+                "payload_keys": sorted(payload.keys()),
+                "status": payload.get("status"),
+                "output_summary": output_summary,
+                "has_output_text": isinstance(payload.get("output_text"), str) and bool(payload.get("output_text")),
+            }
+        }, ensure_ascii=False))
         raw = payload.get("output_text", "") or ""
+        if not isinstance(raw, str):
+            raw = ""
         if not raw:
-            raw = "".join(
-                str(part.get("text", ""))
-                for output in payload.get("output", [])
-                if isinstance(output, dict)
-                for part in output.get("content", [])
-                if isinstance(part, dict) and part.get("type") in {"output_text", "text"}
-            )
+            text_parts = []
+
+            def collect_text(value):
+                if isinstance(value, dict):
+                    if isinstance(value.get("text"), str):
+                        text_parts.append(value["text"])
+                    for key in ("output", "content", "message"):
+                        collect_text(value.get(key))
+                elif isinstance(value, list):
+                    for entry in value:
+                        collect_text(entry)
+
+            collect_text(output)
+            raw = "".join(text_parts)
         match = raw[raw.find("{"):raw.rfind("}") + 1]
         result_data = json.loads(match) if match else {}
     except HTTPError as exc:
