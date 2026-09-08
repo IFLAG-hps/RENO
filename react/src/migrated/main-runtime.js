@@ -1484,9 +1484,9 @@ function startPhotoDiagnosisMock() {
       <div class="bubble agent" style="max-width:88%;">
         <div style="font-size:13px;font-weight:600;margin-bottom:9px;">状態診断結果（デモ）</div>
         ${beforeURL ? `<img src="${beforeURL}" alt="診断した写真" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ''}
-        <div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>壁紙（クロス）</strong><br><span style="font-size:11px;color:var(--muted);">継ぎ目の浮き・黄ばみが見られます</span><span style="float:right;color:var(--gold);font-size:11px;">劣化あり</span></div>
+        <div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>壁紙（クロス）</strong><br><span style="font-size:11px;color:var(--muted);">継ぎ目の浮き・黄ばみが見られます</span><span style="float:right;color:#b42318;background:#fff1f0;border:1px solid #f5b7b1;border-radius:999px;padding:3px 8px;font-weight:700;font-size:11px;">劣化あり</span></div>
         <div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>床材</strong><br><span style="font-size:11px;color:var(--muted);">複合フローリング（推定）・細かな擦り傷</span><span style="float:right;color:var(--green);font-size:11px;">劣化なし</span></div>
-        <div style="padding:9px 0;"><strong>建具（ドア枠）</strong><br><span style="font-size:11px;color:var(--muted);">日焼けによる色あせが目立ちます</span><span style="float:right;color:#c05040;font-size:11px;">劣化あり</span></div>
+        <div style="padding:9px 0;"><strong>建具（ドア枠）</strong><br><span style="font-size:11px;color:var(--muted);">日焼けによる色あせが目立ちます</span><span style="float:right;color:#b42318;background:#fff1f0;border:1px solid #f5b7b1;border-radius:999px;padding:3px 8px;font-weight:700;font-size:11px;">劣化あり</span></div>
         <div style="font-size:11px;color:var(--muted);line-height:1.6;background:var(--bg);padding:9px 10px;border-radius:7px;">💡 壁紙の張替えと建具の再塗装を優先すると、費用対効果が高そうです。</div>
         <div style="display:flex;gap:7px;margin-top:10px;">
           <button class="chip" type="button" onclick="startCatalogFromDiagnosis()">素材を探す</button>
@@ -1533,8 +1533,14 @@ async function startPhotoDiagnosis() {
     if (!res.ok || !data.analysis) throw new Error(data.error || '写真の分析に失敗しました');
     removeTyping();
     const items = Array.isArray(data.analysis.items) ? data.analysis.items : [];
-    const severityColor = { 軽度: 'var(--green)', 中度: 'var(--gold)', 重度: '#c05040' };
-    const rows = items.map(item => `<div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>${escapeHTML(item.name)}</strong><br><span style="font-size:11px;color:var(--muted);">${escapeHTML(item.finding)}</span><span style="float:right;color:${severityColor[item.severity] || 'var(--muted)'};font-size:11px;">${escapeHTML(item.severity)}</span></div>`).join('');
+    const severityColor = { 軽度: 'var(--green)', 中度: 'var(--gold)', 重度: '#c05040', '劣化あり': '#b42318', '劣化なし': 'var(--green)' };
+    const rows = items.map(item => {
+      const degraded = item.severity === '劣化あり' || item.severity === '重度';
+      const badgeStyle = degraded
+        ? 'color:#b42318;background:#fff1f0;border:1px solid #f5b7b1;border-radius:999px;padding:3px 8px;font-weight:700;'
+        : 'color:var(--green);background:#f0faf4;border:1px solid #b7e1c5;border-radius:999px;padding:3px 8px;';
+      return `<div style="padding:9px 0;border-bottom:1px solid var(--border);"><strong>${escapeHTML(item.name)}</strong><br><span style="font-size:11px;color:var(--muted);">${escapeHTML(item.finding)}</span><span style="float:right;${badgeStyle}font-size:11px;">${escapeHTML(item.severity)}</span></div>`;
+    }).join('');
     const chat = document.getElementById('chat');
     const div = document.createElement('div');
     div.className = 'msg agent';
@@ -1570,6 +1576,8 @@ async function sendDiagnosisQuestion() {
     addAgentMessage(`回答の取得に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
   }
 }
+
+window.sendDiagnosisQuestion = sendDiagnosisQuestion;
 
 function startCatalogFromDiagnosis() {
   addUserMessage('素材を探す');
