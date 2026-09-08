@@ -208,6 +208,77 @@ def image_data_url(key):
     return f"data:{content_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
 
 
+def _multipart_field(boundary, name, value):
+    return (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").encode()
+
+
+def _multipart_file(boundary, name, filename, content_type, value):
+    header = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"; filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n").encode()
+    return header + value + b"\r\n"
+
+
+def generate_image(body, user):
+    session_id = str(body.get("sessionId", "")).strip()
+    source_key = str(body.get("sourceImageKey", "")).strip()
+    prompt = str(body.get("prompt", "")).strip()[:5000]
+    context = body.get("context", [])
+    if not session_id or not session_item(user, session_id): return {"error": "session not found"}
+    if not source_key or not owned_upload_key(user, source_key): return {"error": "forbidden photo key"}
+    try:
+        source = S3.get_object(Bucket=os.environ["ASSET_BUCKET"], Key=source_key)
+        source_bytes = source["Body"].read()
+        source_type = source.get("ContentType", "image/jpeg")
+    except Exception as exc:
+        print(json.dumps({"s3_generation_error": str(exc)}, ensure_ascii=False))
+        return {"error": "uploaded object not found"}
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key: return {"error": "AI service is not configured"}
+    context_text = json.dumps(context[-20:] if isinstance(context, list) else [], ensure_ascii=False)[:16000]
+    instruction = (
+        "Create a low-quality but clearly understandable renovation-after image based on the input room photo. "
+        "Preserve the existing floor plan, windows, doors, camera viewpoint, room proportions and visible structure. "
+        "Change only flooring, wallpaper, fixtures, colors, materials, or style explicitly requested by the user. "
+        "Do not invent details that are not visible in the source photo. This is a conceptual finished-image preview, not a construction drawing.\n"
+        f"Requested changes: {prompt or 'Use the confirmed renovation preferences from the conversation.'}\n"
+        f"Conversation and flow context: {context_text}"
+    )
+    boundary = "----reno-image-" + uuid.uuid4().hex
+    payload = b"".join([
+        _multipart_field(boundary, "model", os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1")),
+        _multipart_field(boundary, "prompt", instruction),
+        _multipart_field(boundary, "size", "1024x1024"),
+        _multipart_field(boundary, "quality", "low"),
+        _multipart_file(boundary, "image", "source.jpg", source_type, source_bytes),
+        f"--{boundary}--\r\n".encode(),
+    ])
+    request = Request("https://api.openai.com/v1/images/edits", data=payload,
+                      headers={"Authorization": f"Bearer {api_key}", "Content-Type": f"multipart/form-data; boundary={boundary}"}, method="POST")
+    try:
+        with urlopen(request, timeout=25) as result: result_payload = json.loads(result.read())
+        generated = (result_payload.get("data") or [{}])[0]
+        encoded = generated.get("b64_json")
+        if not encoded:
+            print(json.dumps({"image_generation_validation_failed": True, "response_keys": sorted(result_payload.keys())}, ensure_ascii=False))
+            return {"error": "AI image generation returned no image"}
+        image_bytes = base64.b64decode(encoded)
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:2000]
+        print(json.dumps({"openai_image_generation_error": f"HTTP {exc.code}", "detail": detail}, ensure_ascii=False))
+        return {"error": "AI image service is temporarily unavailable"}
+    except (URLError, TimeoutError, ValueError, json.JSONDecodeError, base64.binascii.Error) as exc:
+        print(json.dumps({"openai_image_generation_error": str(exc)}, ensure_ascii=False))
+        return {"error": "AI image service is temporarily unavailable"}
+    image_id = str(uuid.uuid4())
+    generated_key = f"generated/{user['sub']}/{session_id}/{image_id}.png"
+    S3.put_object(Bucket=os.environ["ASSET_BUCKET"], Key=generated_key, Body=image_bytes, ContentType="image/png")
+    now = int(time.time())
+    save({"pk": "USER#" + user["sub"], "sk": "GENERATED#" + image_id, "id": image_id, "session_id": session_id,
+          "s3_key": generated_key, "content_type": "image/png", "source_image_key": source_key,
+          "prompt": prompt, "created_at": now, "schema_version": 1})
+    print(json.dumps({"image_generation_completed": True, "image_id": image_id, "session_id": session_id}, ensure_ascii=False))
+    return {"sessionId": session_id, "image": {"id": image_id, "key": generated_key, "downloadUrl": signed_download_url(generated_key), "contentType": "image/png", "createdAt": now}, "usage": usage(user)}
+
+
 def attach_photo(user, session_id, key, filename, content_type, room_type=""):
     if not session_id or not session_item(user, session_id): return None, "session not found"
     if not owned_upload_key(user, key): return None, "forbidden"
@@ -706,6 +777,10 @@ def lambda_handler(event, context):
         if typ == "diagnosis_chat":
             result = diagnosis_chat(body, user)
             status = 200 if "error" not in result else (400 if result["error"] == "question is required" else 404 if result["error"] == "uploaded object not found" else 403 if result["error"] == "forbidden photo key" else 503)
+            return response(status, result)
+        if typ == "generate_image":
+            result = generate_image(body, user)
+            status = 200 if "error" not in result else (404 if result["error"] in {"session not found", "uploaded object not found"} else 403 if result["error"] == "forbidden photo key" else 503)
             return response(status, result)
         if typ == "create_download_url":
             key = str(body.get("key", "")); allowed = (f"uploads/{user['sub']}/", f"generated/{user['sub']}/", f"proposals/{user['sub']}/")
