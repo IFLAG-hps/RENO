@@ -7,6 +7,7 @@
     "serve:frontend": "node scripts/static-server.mjs",
     "serve:react": "node scripts/static-server.mjs dist",
     "test:e2e": "npm run build:react && playwright test",
+    "test:e2e:local": "npm run build:react && playwright test --grep-invert @live-site",
     "test:workflows": "node scripts/validate-workflows.mjs"
   },
   "dependencies": {
