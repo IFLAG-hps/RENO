@@ -13,6 +13,7 @@ Globals:
         ASSET_BUCKET: !Ref RenoAssetBucket
         OPENAI_API_KEY: !Ref OpenAIApiKey
         OPENAI_MODEL: !Ref OpenAIModel
+        OPENAI_IMAGE_MODEL: !Ref OpenAIImageModel
         SES_FROM_EMAIL: !Ref SesFromEmail
         SES_TO_EMAIL: !Ref SesToEmail
         TOKEN_SECRET: !Ref TokenSecret
@@ -33,6 +34,9 @@ Parameters:
   OpenAIModel:
     Type: String
     Default: gpt-5-mini
+  OpenAIImageModel:
+    Type: String
+    Default: gpt-image-1
   SesFromEmail:
     Type: String
     Default: ''

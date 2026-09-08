@@ -1307,7 +1307,7 @@ function addAgentMessage(text, afterSrc = null, beforeSrc = null, suggestions = 
   if (safeAfterSrc && safeBeforeSrc) {
     inner += `<div class="compare-pair">
       <div class="ci"><span class="ci-tag before">Before</span><img src="${escapeHTML(safeBeforeSrc)}" alt="before"></div>
-      <div class="ci"><span class="ci-tag after">After</span><img src="${escapeHTML(safeAfterSrc)}" alt="after"></div>
+      <div class="ci"><span class="ci-tag after">完成予想図</span><img src="${escapeHTML(safeAfterSrc)}" alt="完成予想図"></div>
     </div>`;
     inner += `<div class="share-bar">
       <button class="share-btn line" onclick="shareViaLine('${escapeHTML(escapeJSString(safeAfterSrc))}')">
@@ -1706,21 +1706,23 @@ async function generateWithFiles(beforeFile, idealFile) {
       return;
     }
 
-    const form = new FormData();
-    form.append('token', sessionToken);
+    const sourceImageKey = window._lastPhoto?.key || '';
+    if (!sourceImageKey) throw new Error('現状写真の保存情報がありません。写真を再アップロードしてください');
+    const generationContext = history.slice(-20).map(message => ({
+      role: message.role,
+      content: String(message.content || '').slice(0, 2000)
+    }));
 
     // 理想画像がある場合はプロンプトに指示を追加
-    if (idealFile) {
-      const enhancedPrompt = prompt + ' Apply the interior style, materials, colors, and design aesthetic from the reference style image to this room. Keep the room structure and layout exactly the same. Photorealistic interior design.';
-      form.append('prompt', enhancedPrompt);
-      form.append('image[]', bf, bf.name);
-      form.append('image[]', idealFile, idealFile.name);
-    } else {
-      form.append('prompt', prompt);
-      form.append('image', bf, bf.name);
-    }
-
-    const res  = await fetchWithTimeout(EDGE_URL, { method:'POST', headers: EDGE_HEADERS, body: form }, 90000);
+    const enhancedPrompt = idealFile
+      ? `${prompt} 参考画像が選択されています。参考画像の雰囲気・色・素材感を、現状写真の構造を変えずに反映してください。`
+      : prompt;
+    const res = await fetchWithTimeout(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: sessionToken, type: 'generate_image', sessionId: currentSessionId,
+        prompt: enhancedPrompt, sourceImageKey, context: generationContext })
+    }, 90000);
     const data = await res.json();
 
     if (res.status === 429 && data.error === 'limit_exceeded' && !DEMO_BYPASS_LIMIT) {
@@ -1733,8 +1735,7 @@ async function generateWithFiles(beforeFile, idealFile) {
 
     if (!res.ok) throw new Error(data.error?.message || data.error || '生成に失敗しました');
 
-    const img = data.data?.[0];
-    const src = img?.url || (img?.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+    const src = data.image?.downloadUrl || null;
     if (!src) throw new Error('画像の取得に失敗しました');
 
     window._lastAfterSrc = src;
