@@ -10,9 +10,9 @@
 Amplifyコンソールで`main`ブランチのAccess controlを`No restriction`にする。
 サイト入口は公開し、RENO内で以下を制御する。
 
-- 一般利用者：ゲストPIN
+- 一般利用者：PINなしで利用開始
 - 管理者：Cognitoログイン
-- PIN管理：Cognitoで許可された管理者のみ
+- 管理者機能：Cognitoで許可された管理者のみ
 
 ## 過去の設定方法
 
@@ -31,7 +31,7 @@ Amplifyコンソールで`main`ブランチのAccess controlを`No restriction`�
 Amplifyの公開URLを開くと、ブラウザに認証ダイアログが表示される。
 設定したユーザー名とパスワードを入力するとサイトを閲覧できる。
 
-これはサイト閲覧用の一時認証であり、RENOアプリ内のPIN発行権限やAWS管理者権限ではない。
+これはサイト閲覧用の一時認証であり、RENOアプリ内の管理者権限やAWS管理者権限ではない。
 
 ## 撤去時
 

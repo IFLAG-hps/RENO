@@ -263,9 +263,9 @@ def analyze_photo(body, user):
         "ユーザーの確認希望がある場合は、その意図を優先し、画像に写っていない対象は無理に判定しないでください。"
         f"ユーザーの確認希望: {focus or '特になし。画像全体を確認してください。'}"
         "次のJSONだけを返してください。"
-        '{"items":[{"name":"component","finding":"visible condition","severity":"low|medium|high"}],'
+        '{"items":[{"name":"component","finding":"visible condition","degraded":true}],'
         '"summary":"気になる箇所の短いまとめ"}'
-        "itemsには画像から気になる部材を最大5件含めてください。severityは劣化の可能性の目安です。"
+        "itemsには画像から気になる部材を最大5件含めてください。degradedは、画像からおおむね劣化していると判断できる場合だけtrue、明らかな劣化が見られない場合はfalseにしてください。"
     )
     request = Request("https://api.openai.com/v1/responses", data=json.dumps({
         "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
@@ -279,7 +279,15 @@ def analyze_photo(body, user):
     try:
         with urlopen(request, timeout=30) as result:
             payload = json.loads(result.read())
-        raw = payload.get("output_text", "")
+        raw = payload.get("output_text", "") or ""
+        if not raw:
+            raw = "".join(
+                str(part.get("text", ""))
+                for output in payload.get("output", [])
+                if isinstance(output, dict)
+                for part in output.get("content", [])
+                if isinstance(part, dict) and part.get("type") in {"output_text", "text"}
+            )
         match = raw[raw.find("{"):raw.rfind("}") + 1]
         result_data = json.loads(match) if match else {}
     except HTTPError as exc:
@@ -290,8 +298,11 @@ def analyze_photo(body, user):
         print(json.dumps({"openai_analysis_error": str(exc)}, ensure_ascii=False))
         return {"error": "AI service is temporarily unavailable"}
 
+    source_items = result_data.get("items")
+    if not isinstance(source_items, list):
+        source_items = result_data.get("areas", [])
     items = []
-    for item in result_data.get("items", []) if isinstance(result_data.get("items"), list) else []:
+    for item in source_items if isinstance(source_items, list) else []:
         if not isinstance(item, dict):
             continue
         name = str(item.get("name", "")).strip()[:80]
@@ -302,9 +313,20 @@ def analyze_photo(body, user):
             "軽度": "軽度", "中度": "中度", "重度": "重度",
             "霆ｽ蠎ｦ": "軽度", "荳ｭ蠎ｦ": "中度", "驥榊ｺｦ": "重度",
         }.get(severity_value, "")
+        if "degraded" in item:
+            degraded = item.get("degraded")
+            if isinstance(degraded, bool):
+                severity = "劣化あり" if degraded else "劣化なし"
         if name and finding and severity:
             items.append({"name": name, "finding": finding, "severity": severity})
     if not items:
+        print(json.dumps({
+            "analysis_validation_failed": True,
+            "response_keys": sorted(result_data.keys()) if isinstance(result_data, dict) else [],
+            "source_item_count": len(source_items) if isinstance(source_items, list) else 0,
+            "source_item_keys": [sorted(item.keys()) for item in source_items[:5] if isinstance(item, dict)] if isinstance(source_items, list) else [],
+            "raw_response_length": len(raw),
+        }, ensure_ascii=False))
         return {"error": "AI analysis returned no valid result"}
     analysis = {"items": items[:5], "summary": str(result_data.get("summary", "")).strip()[:400], "focus": focus, "source": "ai"}
 

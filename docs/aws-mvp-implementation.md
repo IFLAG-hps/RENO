@@ -10,8 +10,8 @@
 | 画像 | `create_upload_url` / `create_download_url`。S3の署名付きURL |
 | セッション | DynamoDBへ保存する `save_session` |
 | 相談受付 | DynamoDB保存。SESの送信元・宛先を設定した場合はメール送信 |
-| 利用状況 | `get_usage` のMVP応答 |
-| ゲストアクセス | DynamoDB管理のPIN発行・検証 |
+| 利用状況 | `get_usage` のMVP応答（利用回数の調整は後続対応） |
+| ゲストアクセス | 認証なしの利用開始方式を前提とする |
 | 認証基盤 | Cognito User PoolをSAMで作成。アプリ固有の短期トークンはLambdaで署名 |
 | 監視 | LambdaのCloudWatch Logs |
 
