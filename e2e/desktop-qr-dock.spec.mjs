@@ -10,7 +10,12 @@ test('PC表示時だけスマホで開くQRコードを常駐表示する', asyn
   const dock = page.locator('#desktopQrDock');
   await expect(dock).toBeVisible();
   await expect(dock).toContainText('スマホで開く');
-  await expect(dock.locator('img')).toBeVisible();
+  const qrImage = dock.locator('img');
+  await expect(qrImage).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => {
+    const src = document.querySelector('#desktopQrDock img')?.src;
+    return src ? new URL(src).searchParams.get('data') : null;
+  })).toBe(`${new URL(process.env.E2E_BASE_URL || 'http://127.0.0.1:4173').origin}/`);
   expect((await dock.boundingBox()).width).toBeLessThan(170);
   const beforeDrag = await dock.boundingBox();
   const handle = dock.locator('.desktop-qr-dock-drag-handle');
