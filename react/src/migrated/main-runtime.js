@@ -579,6 +579,7 @@ function setupHeaderActions() {
 
   const resetButton = document.getElementById('chatResetBtn');
   if (resetButton && resetButton.parentElement !== headerRight) {
+    resetButton.classList.remove('h-menu-btn');
     resetButton.classList.add('header-action-btn');
     headerRight.insertBefore(resetButton, headerRight.querySelector('#qrBtn') || headerRight.lastElementChild);
   }
@@ -590,7 +591,7 @@ function setupHeaderActions() {
     const logoutButton = document.createElement('button');
     logoutButton.id = 'headerLogoutBtn';
     logoutButton.type = 'button';
-    logoutButton.className = 'h-menu-btn header-action-btn header-logout-btn';
+    logoutButton.className = 'header-action-btn header-logout-btn';
     logoutButton.title = 'ログアウト';
     logoutButton.textContent = 'ログアウト';
     logoutButton.addEventListener('click', logoutApp);
