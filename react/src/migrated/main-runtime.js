@@ -2437,17 +2437,52 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
     const [afterB64, beforeB64] = await Promise.all([toBase64(afterSrc), toBase64(beforeSrc)]);
     const beforeImage = document.getElementById('pdf-before-img');
     const afterImage = document.getElementById('pdf-after-img');
-    // Keep the fixed image slots, but contain the source image so html2canvas
-    // cannot crop or stretch it when creating the PDF.
-    [beforeImage, afterImage].forEach((image) => {
-      image.style.objectFit = 'contain';
-      image.style.backgroundColor = '#161616';
-    });
     beforeImage.parentElement.style.display = beforeB64 ? 'block' : 'none';
     afterImage.parentElement.style.display = afterB64 ? 'block' : 'none';
     beforeImage.src = beforeB64;
     afterImage.src = afterB64;
     document.getElementById('pdf-images-block').style.display = beforeB64 || afterB64 ? 'block' : 'none';
+
+    // html2canvas does not consistently honor object-fit. Pre-compose each
+    // image into a canvas with the exact PDF slot ratio so the captured pixels
+    // already have the correct aspect ratio.
+    const fitImageToPdfSlot = async (image, src) => {
+      if (!src) return;
+      if (!image.complete || !image.naturalWidth) {
+        await new Promise((resolve, reject) => {
+          image.addEventListener('load', resolve, { once: true });
+          image.addEventListener('error', reject, { once: true });
+        });
+      }
+      const rect = image.getBoundingClientRect();
+      const slotWidth = Math.max(1, Math.round(rect.width || image.clientWidth || 340));
+      const slotHeight = Math.max(1, Math.round(rect.height || image.clientHeight || 200));
+      const scale = 2;
+      const fitted = document.createElement('canvas');
+      fitted.width = slotWidth * scale;
+      fitted.height = slotHeight * scale;
+      const context = fitted.getContext('2d');
+      context.fillStyle = '#161616';
+      context.fillRect(0, 0, fitted.width, fitted.height);
+      const sourceRatio = image.naturalWidth / image.naturalHeight;
+      const slotRatio = fitted.width / fitted.height;
+      const drawWidth = sourceRatio > slotRatio ? fitted.width : fitted.height * sourceRatio;
+      const drawHeight = sourceRatio > slotRatio ? fitted.width / sourceRatio : fitted.height;
+      context.drawImage(
+        image,
+        (fitted.width - drawWidth) / 2,
+        (fitted.height - drawHeight) / 2,
+        drawWidth,
+        drawHeight
+      );
+      image.style.objectFit = 'fill';
+      image.src = fitted.toDataURL('image/jpeg', 0.95);
+    };
+
+    await Promise.all([
+      fitImageToPdfSlot(beforeImage, beforeB64),
+      fitImageToPdfSlot(afterImage, afterB64),
+    ]);
 
     // Notes
     if (info.notes) {
@@ -2457,7 +2492,7 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
       document.getElementById('pdf-notes-block').style.display = 'none';
     }
 
-    // 3. Wait for images to load
+    // 3. Allow the pre-composed images to settle before capture.
     await new Promise(r => setTimeout(r, 600));
 
     // 4. html2canvas → jsPDF
