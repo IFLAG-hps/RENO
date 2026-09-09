@@ -7,7 +7,7 @@
     "serve:frontend": "node scripts/static-server.mjs",
     "serve:react": "node scripts/static-server.mjs dist",
     "test:unit:backend": "python -m unittest discover -s backend/tests -p \"test_unit_*.py\" -v",
-    "test:unit:react": "vitest run",
+    "test:unit:react": "vitest run --configLoader runner --pool forks --no-file-parallelism",
     "test:unit": "npm run test:unit:backend && npm run test:unit:react",
     "test:e2e": "npm run build:react && playwright test",
     "test:e2e:local": "npm run build:react && playwright test --grep-invert @live-site",

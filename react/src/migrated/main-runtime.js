@@ -2437,6 +2437,12 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
     const [afterB64, beforeB64] = await Promise.all([toBase64(afterSrc), toBase64(beforeSrc)]);
     const beforeImage = document.getElementById('pdf-before-img');
     const afterImage = document.getElementById('pdf-after-img');
+    // Keep the fixed image slots, but contain the source image so html2canvas
+    // cannot crop or stretch it when creating the PDF.
+    [beforeImage, afterImage].forEach((image) => {
+      image.style.objectFit = 'contain';
+      image.style.backgroundColor = '#161616';
+    });
     beforeImage.parentElement.style.display = beforeB64 ? 'block' : 'none';
     afterImage.parentElement.style.display = afterB64 ? 'block' : 'none';
     beforeImage.src = beforeB64;
@@ -2481,7 +2487,9 @@ async function generatePDF(afterSrc, beforeSrc, onComplete = null) {
         pageCanvas.width = canvas.width;
         pageCanvas.height = Math.min(pageH, canvas.height - srcY);
         pageCanvas.getContext('2d').drawImage(canvas, 0, -srcY);
-        doc.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H);
+        // The last canvas can be shorter than a full page. Preserve its aspect ratio.
+        const pageCanvasH = (pageCanvas.height / pageCanvas.width) * W;
+        doc.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, pageCanvasH);
         srcY += pageH;
         if (srcY < canvas.height) doc.addPage();
       }
