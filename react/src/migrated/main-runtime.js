@@ -822,9 +822,9 @@ function lockApp() {
   clearAuthSession();
   pinChecking = false;
   renderDots();
-  document.getElementById('pinScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('guestPinSection').style.display = 'none';
+  document.getElementById('pinScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('guestPinSection').style.display = '';
   document.getElementById('adminLoginSection').style.display = 'none';
   const avatarBtn = document.getElementById('userAvatarBtn');
   if (avatarBtn) avatarBtn.style.display = 'none';
@@ -833,7 +833,6 @@ function lockApp() {
   // URLに?pinが残っているとリロード時に再度ゲスト扱いになるので消しておく
   if (location.search) { try { window.history.replaceState(null, '', location.pathname); } catch (e) {} }
   if (supabaseAuth) supabaseAuth.auth.signOut().catch(() => {});
-  startDemoSession();
 }
 
 // ── Chat ──
@@ -1603,6 +1602,12 @@ async function startPhotoDiagnosis() {
     scrollBottom();
   } catch (error) {
     removeTyping();
+    if (error.message === 'photo_not_supported' || error.message === 'AI analysis returned no valid result') {
+      addAgentMessage('この写真はリフォーム対象の状態を確認できない画像のようです。別の室内写真を送るか、写真なしでそのまま相談を続けられます。');
+      showUploadCard('別の室内写真を送る場合は、もう一度写真を選択してください');
+      document.getElementById('userInput')?.focus();
+      return;
+    }
     addAgentMessage(`写真の分析に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
   }
 }
