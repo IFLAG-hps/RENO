@@ -754,13 +754,14 @@ def lambda_handler(event, context):
         if typ == "cognito_login":
             access_token = str(body.get("access_token", ""))
             admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-            if not access_token or not admin_email: return response(401, {"error": "admin login is not configured"})
+            if not access_token: return response(401, {"error": "Cognito access token is required"})
             try:
                 cognito_user = COGNITO.get_user(AccessToken=access_token)
                 attributes = {item.get("Name"): item.get("Value", "") for item in cognito_user.get("UserAttributes", [])}
                 email = attributes.get("email", "").strip().lower()
-                if not email or email != admin_email: return response(403, {"error": "admin access denied"})
-                return response(200, {"token": token_for("admin:" + email, "admin"), "role": "admin", "email": email})
+                if not email: return response(403, {"error": "email is required for this user pool"})
+                role = "admin" if admin_email and email == admin_email else "user"
+                return response(200, {"token": token_for("cognito:" + email, role), "role": role, "email": email})
             except Exception:
                 return response(401, {"error": "invalid Cognito session"})
         user = subject_from_token(body.get("token", ""))

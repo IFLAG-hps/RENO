@@ -424,14 +424,31 @@ function initLoginView() {
   document.getElementById('guestPinSection')?.remove();
   document.getElementById('gpinMenuItem')?.remove();
   document.getElementById('guestPinPanel')?.remove();
+  showCognitoLogin('user');
+}
+
+function showCognitoLogin(mode = 'user') {
+  cognitoLoginMode = mode === 'admin' ? 'admin' : 'user';
   document.getElementById('adminLoginSection').style.display = '';
   const section = document.getElementById('adminLoginSection');
-  if (section && !section.querySelector('.cognito-login-title')) {
-    const title = document.createElement('div');
-    title.className = 'cognito-login-title';
-    title.textContent = 'ログイン';
-    section.prepend(title);
-  }
+  if (!section) return;
+  section.querySelector('.cognito-login-title')?.remove();
+  section.querySelector('.cognito-login-help')?.remove();
+  section.querySelector('.cognito-login-switch')?.remove();
+  const title = document.createElement('div');
+  title.className = 'cognito-login-title';
+  title.textContent = cognitoLoginMode === 'admin' ? '管理者ログイン' : '一般ログイン';
+  section.prepend(title);
+  const help = document.createElement('div');
+  help.className = 'cognito-login-help';
+  help.textContent = cognitoLoginMode === 'admin' ? '管理者アカウントでログインしてください。' : 'メールアドレスとパスワードでログインしてください。';
+  title.after(help);
+  const switchButton = document.createElement('button');
+  switchButton.type = 'button';
+  switchButton.className = 'cognito-login-switch';
+  switchButton.textContent = cognitoLoginMode === 'admin' ? '一般ログインに戻る' : '管理者はこちら';
+  switchButton.addEventListener('click', () => showCognitoLogin(cognitoLoginMode === 'admin' ? 'user' : 'admin'));
+  section.append(switchButton);
   const button = document.getElementById('googleLoginBtn');
   if (button) button.lastChild.textContent = 'ログイン';
   document.getElementById('adminEmailInput')?.focus();
@@ -608,6 +625,7 @@ async function switchGoogleAccount() {
 let cognitoChallengeSession = '';
 let cognitoUsername = '';
 let cognitoChallengeName = '';
+let cognitoLoginMode = 'user';
 
 async function cognitoRequest(target, body) {
   const region = window.RENO_CONFIG?.cognitoRegion || 'ap-northeast-1';
@@ -632,7 +650,7 @@ async function loginWithCognito() {
   if (!clientId) { if (statusEl) statusEl.textContent = 'Cognito設定が未反映です'; return; }
   if (!email || !password) { if (statusEl) statusEl.textContent = 'メールアドレスとパスワードを入力してください'; return; }
   button.disabled = true;
-  if (statusEl) statusEl.textContent = '管理者認証中...';
+  if (statusEl) statusEl.textContent = `${cognitoLoginMode === 'admin' ? '管理者' : '一般'}認証中...`;
   try {
     let auth;
     if (cognitoChallengeSession) {
@@ -682,14 +700,16 @@ async function loginWithCognito() {
       body: JSON.stringify({ type: 'cognito_login', access_token: accessToken })
     });
     const data = await res.json();
-    if (!res.ok || !data.token || data.role !== 'admin') throw new Error(data.error || '管理者権限がありません');
+    if (!res.ok || !data.token || (cognitoLoginMode === 'admin' && data.role !== 'admin')) {
+      throw new Error(data.error || (cognitoLoginMode === 'admin' ? '管理者権限がありません' : 'ログインできませんでした'));
+    }
     cognitoChallengeSession = '';
     cognitoChallengeName = '';
     document.getElementById('adminNewPasswordInput').style.display = 'none';
     document.getElementById('adminMfaInput').style.display = 'none';
     applySession(data);
   } catch (e) {
-    if (statusEl) statusEl.textContent = e.message || '管理者ログインに失敗しました';
+    if (statusEl) statusEl.textContent = e.message || 'ログインに失敗しました';
     if (!cognitoChallengeSession) {
       document.getElementById('adminMfaInput').style.display = 'none';
       document.getElementById('adminNewPasswordInput').style.display = 'none';
@@ -758,7 +778,7 @@ async function handleGoogleRedirect() {
 
 function openAdminLogin() {
   lockApp();
-  setTimeout(() => document.getElementById('adminEmailInput')?.focus(), 50);
+  setTimeout(() => showCognitoLogin('admin'), 50);
 }
 
 function logoutApp() {
@@ -788,7 +808,7 @@ function lockApp() {
   document.getElementById('pinScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('guestPinSection')?.remove();
-  document.getElementById('adminLoginSection').style.display = '';
+  showCognitoLogin('user');
   document.getElementById('adminPasswordInput').value = '';
   document.getElementById('adminNewPasswordInput').value = '';
   document.getElementById('adminMfaInput').value = '';
