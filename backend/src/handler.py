@@ -180,9 +180,15 @@ def save_chat_turn(user, session_id, user_message, assistant_message):
     )
 
 
+def is_unlimited_user(user):
+    """Unlimited mode is available only to an authenticated admin account."""
+    return UNLIMITED_MODE and isinstance(user, dict) and user.get("role") == "admin"
+
+
 def usage(user):
     count = len(query_user(user, "CHAT#"))
-    return {"plan": "unlimited" if UNLIMITED_MODE else "standard", "count": count, "limit": USAGE_LIMIT, "remaining": None if UNLIMITED_MODE else max(0, USAGE_LIMIT - count), "unlimited": UNLIMITED_MODE}
+    unlimited = is_unlimited_user(user)
+    return {"plan": "unlimited" if unlimited else "standard", "count": count, "limit": USAGE_LIMIT, "remaining": None if unlimited else max(0, USAGE_LIMIT - count), "unlimited": unlimited}
 
 
 def safe_filename(name):
@@ -558,7 +564,7 @@ def chat(body, user, session_id):
     messages = body.get("messages", [])
     if not isinstance(messages, list) or len(messages) > 50: return {"error": "messages must be an array of at most 50 items"}
     current = usage(user)
-    if not UNLIMITED_MODE and current["count"] >= current["limit"]: return {"error": "usage limit reached", "usage": current}
+    if not current["unlimited"] and current["count"] >= current["limit"]: return {"error": "usage limit reached", "usage": current}
     # CIの空値指定などで空白だけが渡っても、OpenAI API呼び出しへ進めない。
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if api_key:

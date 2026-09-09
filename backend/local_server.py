@@ -12,7 +12,7 @@ os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "test")
 os.environ.setdefault("TABLE_NAME", "reno-localstack-test")
 os.environ.setdefault("ASSET_BUCKET", "reno-localstack-assets")
 os.environ.setdefault("TOKEN_SECRET", "localstack-test-secret-0123456789abcdef")
-os.environ.setdefault("UNLIMITED_MODE", "true")
+os.environ.setdefault("UNLIMITED_MODE", "false")
 os.environ.setdefault("AWS_ENDPOINT_URL", "http://host.docker.internal:4566")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
