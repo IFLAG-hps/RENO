@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isExternalBaseUrl = Boolean(
+  process.env.E2E_BASE_URL && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(process.env.E2E_BASE_URL),
+);
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -11,7 +15,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  webServer: {
+  webServer: isExternalBaseUrl ? undefined : {
     command: 'npm run serve:react',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,

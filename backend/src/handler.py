@@ -503,7 +503,7 @@ def analyze_photo(body, user):
             "source_item_keys": [sorted(item.keys()) for item in source_items[:5] if isinstance(item, dict)] if isinstance(source_items, list) else [],
             "raw_response_length": len(raw),
         }, ensure_ascii=False))
-        return {"error": "AI analysis returned no valid result"}
+        return {"error": "photo_not_supported", "message": "この画像からリフォーム状態を診断できませんでした"}
     analysis = {"items": items[:5], "summary": str(result_data.get("summary", "")).strip()[:400], "focus": focus, "source": "ai"}
 
     if photo_id and session_id:

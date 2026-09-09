@@ -12,6 +12,10 @@ frontend:
     baseDirectory: dist
     files:
       - '**/*'
+  customRules:
+    - source: /pages/<*>
+      target: /
+      status: '302'
   cache:
     paths:
       - node_modules/**/*

@@ -1,0 +1,51 @@
+name: "E2E: Verify live site"
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: "確認対象の実サイトURL"
+        required: true
+        default: "https://dev.d2jusc0nd2q8bh.amplifyapp.com/"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live-site:
+    name: Playwright live-site smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_BASE_URL: ${{ inputs.site_url }}
+      E2E_USE_REAL_API: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live-site smoke tests
+        run: npx playwright test e2e/live-site.spec.mjs --workers=1
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-site-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
