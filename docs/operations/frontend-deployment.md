@@ -2,7 +2,7 @@
 
 ## 正式公開：Amplify Hosting + Lambda
 
-フロントエンドはAmplify HostingへGitHubリポジトリを接続して公開します。対象ブランチへのpushでAmplifyが自動ビルド・デプロイします。GitHub Pages、S3、CloudFrontへGitHub Actionsから直接配信するWorkflowは使用しません。
+フロントエンドはAmplify HostingへGitHubリポジトリを接続して公開します。公開環境では、対象ブランチへのpushを直接公開するのではなく、blue / green の候補ブランチへデプロイし、CI成功後にカスタムドメインを切り替えます。詳細は[Amplify Hosting のブルーグリーンリリース](../deployment/amplify-blue-green.md)を参照してください。GitHub Pages、S3、CloudFrontへGitHub Actionsから直接配信するWorkflowは使用しません。
 
 リポジトリ直下の `amplify.yml` がビルド設定です。
 

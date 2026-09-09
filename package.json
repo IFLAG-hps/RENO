@@ -6,6 +6,9 @@
     "serve:local-backend": "powershell -ExecutionPolicy Bypass -File scripts/start-local-backend.ps1",
     "serve:frontend": "node scripts/static-server.mjs",
     "serve:react": "node scripts/static-server.mjs dist",
+    "test:unit:backend": "python -m unittest discover -s backend/tests -p \"test_unit_*.py\" -v",
+    "test:unit:react": "vitest run",
+    "test:unit": "npm run test:unit:backend && npm run test:unit:react",
     "test:e2e": "npm run build:react && playwright test",
     "test:e2e:local": "npm run build:react && playwright test --grep-invert @live-site",
     "test:workflows": "node scripts/validate-workflows.mjs"
@@ -16,7 +19,11 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.1.0"
+    "jsdom": "^29.1.1",
+    "vite": "^6.1.0",
+    "vitest": "^5.0.0"
   }
 }

@@ -2,14 +2,14 @@
 
 ## 現在の公開構成
 
-フロントエンドはAmplify HostingのGitHubリポジトリ連携で公開します。`main` ブランチへのpushを契機にAmplifyがビルド・デプロイします。GitHub ActionsからGitHub PagesやS3へ直接配信するフローは使用しません。
+フロントエンドはAmplify HostingのGitHubリポジトリ連携で公開します。環境ブランチへのpushで候補色をビルドし、CI成功後にカスタムドメインの向き先を切り替えます。GitHub PagesやS3へ直接配信するフローは使用しません。
 
 ```text
-GitHub main push
+GitHub environment branch push
       ↓
-Amplify Hosting（amplify.ymlでReact/Viteをビルド）
+CI と Amplify候補ビルドを並列実行
       ↓
-Amplify管理の配信基盤
+CI成功後に blue / green を切替
       ↓
 API Gateway → Lambda → OpenAI API / DynamoDB / S3
 ```
@@ -45,6 +45,10 @@ LocalStack、SAM、React、PlaywrightのCIを実行します。AWSへの実デ�
 
 `main-deploy.yml` は、CIに加えて、手動入力で本番デプロイを実行できます。デプロイ後は、CloudFormationの出力URLを使ったAPIスモークテストと、実APIを使うフロントエンドE2Eを実行します。
 
+### `frontend-blue-green.yml`
+
+Amplifyの非稼働色へ候補をデプロイしながら、`main-deploy.yml` を非同期に起動します。候補デプロイが先に終わった場合も、CIの成功をポーリングして確認するまで公開先を切り替えません。失敗時は現行の公開色を維持し、切替後の確認失敗時は直前の色に戻します。
+
 ### `sync-fork.yml`
 
 `main-deploy.yml`のテストが成功した後に自動実行し、テスト済みの`main`を`DaisukeShirai/RENO/main`へ反映します。Amplifyはfork側の`main`を参照するため、この反映を起点にAmplifyがビルド・公開します。
@@ -61,9 +65,9 @@ LocalStack、SAM、React、PlaywrightのCIを実行します。AWSへの実デ�
 2. 変更内容を確認し、プロジェクトの`main`ブランチへマージする。
 3. `main`の状態でローカルテストを実行する。
 4. テスト成功後、`DaisukeShirai/RENO`の`main`へマージまたはpushする。
-5. Amplify Hostingのビルド結果と公開URLを確認する。
+5. `DEPLOY: Blue/green frontend` の成功と公開URLを確認する。
 
-Amplifyは`DaisukeShirai/RENO`の`main`を参照するため、fork側の`main`への反映が公開トリガーになります。GitHub Pages用のworkflowは使用しません。
+Amplifyはfork側の環境ブランチをリリースの入力として使いますが、公開ドメインは候補のテスト成功後だけ切り替えます。GitHub Pages用のworkflowは使用しません。
 
 ローカルテストでは、少なくとも次を実行します。
 
@@ -74,9 +78,9 @@ npm run test:e2e
 
 ### 画面を公開・更新する場合
 
-1. `main` へpushする。
-2. Amplify Hostingのビルド結果を確認する。
-3. Amplifyの公開URLで画面、チャット、画像処理を確認する。
+1. 対象環境ブランチへpushする。
+2. `DEPLOY: Blue/green frontend` の候補デプロイとCIが成功したことを確認する。
+3. 切替後の公開URLで画面、チャット、画像処理を確認する。
 
 ### バックエンドを更新する場合
 

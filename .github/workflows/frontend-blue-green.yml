@@ -1,0 +1,192 @@
+name: "DEPLOY: Blue/green frontend"
+
+on:
+  push:
+    branches: [dev, staging, main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target environment
+        required: true
+        default: production
+        type: choice
+        options: [dev, staging, production]
+      ref:
+        description: Git ref to release (empty uses the selected branch HEAD)
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: amplify-blue-green-${{ inputs.target || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # The Amplify app is connected to the fork. Keeping this guard prevents an
+    # origin-side branch push from trying to publish to the fork's AWS account.
+    if: github.repository == 'DaisukeShirai/RENO'
+    name: Deploy candidate, wait for CI, then cut over
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target || (github.ref_name == 'main' && 'production' || github.ref_name) }}
+    timeout-minutes: 60
+    env:
+      AWS_REGION: ap-northeast-1
+      GH_TOKEN: ${{ github.token }}
+      AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+      AMPLIFY_DOMAIN_NAME: ${{ vars.AMPLIFY_DOMAIN_NAME }}
+      AMPLIFY_DOMAIN_PREFIX: ${{ vars.AMPLIFY_DOMAIN_PREFIX }}
+      AMPLIFY_BLUE_BRANCH: ${{ vars.AMPLIFY_BLUE_BRANCH }}
+      AMPLIFY_GREEN_BRANCH: ${{ vars.AMPLIFY_GREEN_BRANCH }}
+      AMPLIFY_RELEASE_REPOSITORY: ${{ vars.AMPLIFY_RELEASE_REPOSITORY }}
+      AMPLIFY_RELEASE_TOKEN: ${{ secrets.AMPLIFY_RELEASE_TOKEN }}
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+
+      - name: Validate release configuration
+        run: |
+          for value in AMPLIFY_APP_ID AMPLIFY_DOMAIN_NAME AMPLIFY_BLUE_BRANCH AMPLIFY_GREEN_BRANCH AMPLIFY_RELEASE_REPOSITORY AMPLIFY_RELEASE_TOKEN; do
+            test -n "${!value}" || { echo "$value is not configured for this GitHub Environment"; exit 1; }
+          done
+          test "$AMPLIFY_BLUE_BRANCH" != "$AMPLIFY_GREEN_BRANCH" || { echo "Blue and green branches must differ"; exit 1; }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Select inactive color and start CI
+        id: release
+        env:
+          # workflow_dispatch requires a branch or tag here. The precise SHA
+          # being tested is sent separately through the ref input.
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          ASSOCIATION="$(aws amplify get-domain-association --app-id "$AMPLIFY_APP_ID" --domain-name "$AMPLIFY_DOMAIN_NAME")"
+          ACTIVE_BRANCH="$(jq -r --arg prefix "$AMPLIFY_DOMAIN_PREFIX" '.domainAssociation.subDomains[] | select(.subDomainSetting.prefix == $prefix) | .subDomainSetting.branchName' <<<"$ASSOCIATION")"
+          case "$ACTIVE_BRANCH" in
+            "$AMPLIFY_BLUE_BRANCH") CANDIDATE_BRANCH="$AMPLIFY_GREEN_BRANCH" ;;
+            "$AMPLIFY_GREEN_BRANCH") CANDIDATE_BRANCH="$AMPLIFY_BLUE_BRANCH" ;;
+            *) echo "The public domain prefix is not mapped to a configured blue/green branch: $ACTIVE_BRANCH"; exit 1 ;;
+          esac
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/main-deploy.yml/dispatches" \
+            -f ref="$SOURCE_REF" \
+            -f "inputs[ref]=$SOURCE_SHA" \
+            -f "inputs[deploy_aws]=false"
+
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "active_branch=$ACTIVE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "candidate_branch=$CANDIDATE_BRANCH" >> "$GITHUB_OUTPUT"
+          printf '%s' "$ASSOCIATION" > /tmp/domain-association.json
+
+      - name: Find dispatched CI run
+        id: ci
+        env:
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+        run: |
+          for _ in {1..30}; do
+            RUN_ID="$(gh run list --workflow main-deploy.yml --event workflow_dispatch --json databaseId,headSha --limit 30 --jq ".[] | select(.headSha == \"$SOURCE_SHA\") | .databaseId" | head -n 1)"
+            if [ -n "$RUN_ID" ]; then
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The dispatched CI run was not found" >&2
+          exit 1
+
+      - name: Update inactive Amplify source branch
+        env:
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+          CANDIDATE_BRANCH: ${{ steps.release.outputs.candidate_branch }}
+        run: |
+          # Candidate branches must never become public merely because their
+          # source ref changes. The explicit start-job below is the only build.
+          aws amplify update-branch --app-id "$AMPLIFY_APP_ID" --branch-name "$CANDIDATE_BRANCH" --no-enable-auto-build >/dev/null
+          git remote add amplify-release "https://x-access-token:${AMPLIFY_RELEASE_TOKEN}@github.com/${AMPLIFY_RELEASE_REPOSITORY}.git"
+          git push amplify-release "$SOURCE_SHA:refs/heads/$CANDIDATE_BRANCH" --force
+
+      - name: Start candidate Amplify deployment
+        id: amplify
+        env:
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+          CANDIDATE_BRANCH: ${{ steps.release.outputs.candidate_branch }}
+        run: |
+          JOB_ID="$(aws amplify start-job \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name "$CANDIDATE_BRANCH" \
+            --job-type RELEASE \
+            --commit-id "$SOURCE_SHA" \
+            --job-reason "Blue/green candidate for $SOURCE_SHA" \
+            --query 'jobSummary.jobId' \
+            --output text)"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Poll candidate deployment and CI completion
+        env:
+          CANDIDATE_BRANCH: ${{ steps.release.outputs.candidate_branch }}
+          JOB_ID: ${{ steps.amplify.outputs.job_id }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
+        run: |
+          while true; do
+            DEPLOY_STATUS="$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name "$CANDIDATE_BRANCH" --job-id "$JOB_ID" --query 'job.summary.status' --output text)"
+            CI_STATUS="$(gh run view "$CI_RUN_ID" --json status --jq .status)"
+            CI_CONCLUSION="$(gh run view "$CI_RUN_ID" --json conclusion --jq '.conclusion // empty')"
+            echo "candidate=$DEPLOY_STATUS ci=$CI_STATUS ${CI_CONCLUSION:+conclusion=$CI_CONCLUSION}"
+
+            case "$DEPLOY_STATUS" in FAILED|CANCELLED) echo "Candidate deployment failed; public routing remains unchanged" >&2; exit 1 ;; esac
+            case "$CI_STATUS" in completed)
+              test "$CI_CONCLUSION" = success || { echo "CI failed; public routing remains unchanged" >&2; exit 1; }
+              test "$DEPLOY_STATUS" = SUCCEED && exit 0
+            ;; esac
+            sleep 15
+          done
+
+      - name: Cut over custom domain to the tested candidate
+        id: cutover
+        env:
+          CANDIDATE_BRANCH: ${{ steps.release.outputs.candidate_branch }}
+        run: |
+          ORIGINAL_SETTINGS="$(jq -c '[.domainAssociation.subDomains[].subDomainSetting]' /tmp/domain-association.json)"
+          CANDIDATE_SETTINGS="$(jq -c --arg prefix "$AMPLIFY_DOMAIN_PREFIX" --arg branch "$CANDIDATE_BRANCH" '[.domainAssociation.subDomains[].subDomainSetting | if .prefix == $prefix then .branchName = $branch else . end]' /tmp/domain-association.json)"
+          printf '%s' "$ORIGINAL_SETTINGS" > /tmp/original-domain-settings.json
+          aws amplify update-domain-association \
+            --app-id "$AMPLIFY_APP_ID" \
+            --domain-name "$AMPLIFY_DOMAIN_NAME" \
+            --sub-domain-settings "$CANDIDATE_SETTINGS" >/dev/null
+
+      - name: Verify cutover or roll back domain mapping
+        env:
+          ACTIVE_BRANCH: ${{ steps.release.outputs.active_branch }}
+        run: |
+          rollback() {
+            echo "Restoring the previous public branch: $ACTIVE_BRANCH" >&2
+            aws amplify update-domain-association \
+              --app-id "$AMPLIFY_APP_ID" \
+              --domain-name "$AMPLIFY_DOMAIN_NAME" \
+              --sub-domain-settings "$(cat /tmp/original-domain-settings.json)" >/dev/null
+          }
+
+          for _ in {1..40}; do
+            STATUS="$(aws amplify get-domain-association --app-id "$AMPLIFY_APP_ID" --domain-name "$AMPLIFY_DOMAIN_NAME" --query 'domainAssociation.updateStatus' --output text)"
+            case "$STATUS" in
+              UPDATE_COMPLETE) break ;;
+              UPDATE_FAILED) rollback; exit 1 ;;
+            esac
+            sleep 15
+          done
+          test "$STATUS" = UPDATE_COMPLETE || { rollback; echo "Domain switch timed out" >&2; exit 1; }
+
+          HOST="${AMPLIFY_DOMAIN_PREFIX:+${AMPLIFY_DOMAIN_PREFIX}.}${AMPLIFY_DOMAIN_NAME}"
+          curl --fail --silent --show-error --retry 3 "https://$HOST/" >/dev/null || { rollback; exit 1; }

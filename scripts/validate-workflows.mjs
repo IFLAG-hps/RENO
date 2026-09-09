@@ -5,6 +5,7 @@ const files = {
   backend: '.github/workflows/deploy-backend.yml',
   main: '.github/workflows/main-deploy.yml',
   localstack: '.github/workflows/localstack-test.yml',
+  frontend: '.github/workflows/frontend-blue-green.yml',
   sync: '.github/workflows/sync-fork.yml',
   promote: '.github/workflows/promote-tested-issue-branch.yml'
 };
@@ -28,6 +29,16 @@ assert.match(workflows.localstack, /workflow_call:/, 'LocalStack workflow_call i
 assert.match(workflows.backend, /OPENAI_API_KEY: \$\{\{ secrets\.OPENAI_API_KEY \}\}/, 'backend OpenAI key configuration is missing');
 assert.match(workflows.main, /workflow_call:/, 'application validation workflow_call is missing');
 assert.match(workflows.main, /inputs\.ref \|\| github\.sha/, 'application validation ref input is missing');
+assert.match(workflows.main, /Run backend unit tests/, 'application validation backend unit tests are missing');
+assert.match(workflows.main, /test_unit_\*\.py/, 'application validation backend unit test command is missing');
+assert.match(workflows.main, /Run React unit tests/, 'application validation React unit tests are missing');
+assert.match(workflows.main, /npm run test:unit:react/, 'application validation React unit test command is missing');
+assert.match(workflows.main, /description: Git ref to validate/, 'application validation manual ref input is missing');
+assert.match(workflows.frontend, /DEPLOY: Blue\/green frontend/, 'blue/green frontend workflow is missing');
+assert.match(workflows.frontend, /aws amplify start-job/, 'blue/green candidate deployment is missing');
+assert.match(workflows.frontend, /gh run view/, 'blue/green CI polling is missing');
+assert.match(workflows.frontend, /aws amplify update-domain-association/, 'blue/green domain cutover is missing');
+assert.match(workflows.frontend, /Restoring the previous public branch/, 'blue/green rollback is missing');
 assert.match(workflows.sync, /github\.repository == 'IFLAG-hps\/RENO'/, 'fork sync source repository guard is missing');
 assert.match(workflows.sync, /secrets\.FORK_REPO_TOKEN/, 'fork sync token configuration is missing');
 assert.match(workflows.sync, /DaisukeShirai\/RENO\.git/, 'fork repository target is missing');
