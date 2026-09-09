@@ -158,4 +158,4 @@ jobs:
           OpenAIApiKey="${{ secrets.OPENAI_API_KEY }}"
           OpenAIModel="${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}"
           TokenSecret="${{ secrets.TOKEN_SECRET }}"
-          UnlimitedMode="${{ vars.UNLIMITED_MODE || 'true' }}"
+          UnlimitedMode="${{ vars.UNLIMITED_MODE || 'false' }}"
