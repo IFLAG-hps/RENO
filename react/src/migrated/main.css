@@ -55,10 +55,14 @@ html.oauth-pending #oauthLoadingOverlay{display:flex;}
 #header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;padding-top:max(12px, env(safe-area-inset-top));border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white);}
 .h-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:0.12em;color:var(--text);}
 .h-badge{font-size:9px;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;border:1px solid rgba(160,120,56,0.3);padding:2px 6px;border-radius:3px;margin-left:8px;vertical-align:middle;}
-.h-right{display:flex;align-items:center;gap:10px;}
+.h-right{display:flex;align-items:center;gap:6px;}
 .h-usage{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
 .h-menu-btn{background:none;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s;flex-shrink:0;}
 .h-menu-btn:hover{border-color:var(--border2);background:var(--bg);}
+.header-action-btn{width:auto;min-width:36px;height:32px;padding:0 9px;gap:5px;font-family:inherit;font-size:11px;white-space:nowrap;}
+.header-logout-btn{color:#b04040;border-color:rgba(176,64,64,0.28);}
+.header-logout-btn:hover{border-color:rgba(176,64,64,0.5);background:#fff8f7;}
+#inputQrBtn,#chatResetBtn{display:none!important;}
 
 /* ── Menu Sheet ── */
 #menuSheet{
@@ -556,6 +560,7 @@ html.oauth-pending #oauthLoadingOverlay{display:flex;}
 #inputbar{display:block;padding:10px 16px 14px;}
 #inputbarTools{display:flex;align-items:center;justify-content:space-between;max-width:880px;margin:0 auto 8px;}
 #inputbarTools .inputbar-caption{font-size:10px;color:var(--muted);letter-spacing:.08em;}
+#inputbarTools .inputbar-caption{display:none;}
 #inputbarTools .inputbar-actions{display:flex;gap:7px;}
 #inputbarTools .h-menu-btn{width:32px;height:32px;}
 .chat-reset-btn{width:auto !important;padding:0 9px;font-size:11px;gap:5px;color:var(--text2);white-space:nowrap;}
