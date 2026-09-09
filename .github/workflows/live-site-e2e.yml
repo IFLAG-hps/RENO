@@ -9,7 +9,7 @@ on:
       site_url:
         description: "確認対象の実サイトURL"
         required: false
-        default: "https://reno.taskra.jp/"
+        default: "https://dev.d2jusc0nd2q8bh.amplifyapp.com/"
         type: string
 
 permissions:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      E2E_BASE_URL: ${{ inputs.site_url || 'https://reno.taskra.jp/' }}
+      E2E_BASE_URL: ${{ inputs.site_url || 'https://dev.d2jusc0nd2q8bh.amplifyapp.com/' }}
       E2E_USE_REAL_API: "true"
 
     steps:

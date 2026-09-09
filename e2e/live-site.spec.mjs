@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
 
-async function waitForReactShell(page) {
-  await expect(page.locator('#root')).toBeAttached({ timeout: 20_000 });
+async function waitForReactShell(page, response) {
+  const root = page.locator('#root');
+  if (await root.count() === 0) {
+    const body = (await page.locator('body').innerText().catch(() => '')).slice(0, 500);
+    throw new Error([
+      'React shell was not mounted.',
+      `HTTP ${response?.status() ?? 'unknown'}`,
+      `final URL: ${page.url()}`,
+      `content-type: ${response?.headers()['content-type'] ?? 'unknown'}`,
+      `body: ${body || '(empty)'}`,
+    ].join(' | '));
+  }
+  await expect(root).toBeAttached({ timeout: 20_000 });
   await expect.poll(
     () => page.locator('#app:visible, #pinScreen:visible').count(),
     { timeout: 20_000 },
@@ -19,8 +30,8 @@ test.describe('@live-site live site smoke tests', () => {
       if (message.type() === 'error') consoleErrors.push(message.text());
     });
 
-    await page.goto('/');
-    await waitForReactShell(page);
+    const response = await page.goto('/');
+    await waitForReactShell(page, response);
 
     if (!(await isAuthenticated(page))) {
       await expect(page.locator('#adminLoginSection')).toBeVisible();
@@ -41,8 +52,8 @@ test.describe('@live-site live site smoke tests', () => {
 
   test('QR and legacy routes reach the React site', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/');
-    await waitForReactShell(page);
+    const response = await page.goto('/');
+    await waitForReactShell(page, response);
 
     if (await isAuthenticated(page)) {
       const qr = page.locator('#desktopQrDock img');
@@ -66,8 +77,8 @@ test.describe('@live-site live site smoke tests', () => {
   });
 
   test('conversation reset returns to the initial state when a session is available', async ({ page }) => {
-    await page.goto('/');
-    await waitForReactShell(page);
+    const response = await page.goto('/');
+    await waitForReactShell(page, response);
 
     if (!(await isAuthenticated(page))) {
       await expect(page.locator('#adminLoginSection')).toBeVisible();
