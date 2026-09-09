@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('RENOローカル相談フロー', () => {
-  test('PIN認証後にバックエンドAPIでチャットできる', async ({ page }) => {
+  test('認証済みセッションでバックエンドAPIにチャットできる', async ({ page }) => {
     // CIでは外部Supabase CDNの実クライアントを読み込まず、認証スタブを使用する。
     await page.route('**/cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js', (route) => route.abort());
     if (process.env.E2E_USE_REAL_API !== 'true') {
@@ -12,8 +12,12 @@ test.describe('RENOローカル相談フロー', () => {
       }));
       const respond = async (route) => {
         const body = route.request().postDataJSON();
-        if (body.type === 'verify_pin' || body.type === 'demo_login') {
-          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'e2e-token', role: 'guest' }) });
+        if (body.type === 'create_session') {
+          await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ session: { sessionId: 'e2e-session' } }) });
+          return;
+        }
+        if (body.type === 'save_chat_turn') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
           return;
         }
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
@@ -35,6 +39,12 @@ test.describe('RENOローカル相談フロー', () => {
           },
         }),
       };
+      localStorage.setItem('reno_auth_session_v1', JSON.stringify({
+        token: 'e2e-token',
+        role: 'admin',
+        email: 'e2e@example.com',
+        savedAt: Date.now(),
+      }));
     });
     await page.goto('/');
 

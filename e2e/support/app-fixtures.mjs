@@ -8,8 +8,12 @@ export async function installAppStubs(page) {
     }));
     const respond = async (route) => {
       const body = route.request().postDataJSON();
-      if (body.type === 'verify_pin' || body.type === 'demo_login') {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 'e2e-token', role: 'guest' }) });
+      if (body.type === 'create_session') {
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ session: { sessionId: 'e2e-session' } }) });
+        return;
+      }
+      if (body.type === 'save_chat_turn') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
         return;
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
