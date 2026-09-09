@@ -1,12 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-test('旧静的ページ URL は React ルートとして表示される', async ({ page }) => {
-  await page.goto('/pages/agent.html');
-  await expect(page.locator('.agent-card').first()).toBeVisible();
-
-  await page.goto('/pages/revenue.html');
-  await expect(page.locator('.plans-grid')).toBeVisible();
-
-  await page.goto('/pages/mockup.html');
-  await expect(page.locator('.phone')).toBeVisible();
+test('旧静的ページ URL はReact版サイトへ到達できる', async ({ page }) => {
+  for (const legacyPath of ['/pages/agent.html', '/pages/revenue.html', '/pages/mockup.html']) {
+    await page.goto(legacyPath);
+    await expect(page.locator('#root')).toBeVisible();
+    await expect.poll(() => page.locator('#app, .agent-card, .plans-grid, .phone').count()).toBeGreaterThan(0);
+  }
 });

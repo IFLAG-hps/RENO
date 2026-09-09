@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 const POSITION_KEY = 'reno-desktop-qr-position';
 const DEFAULT_POSITION = { right: 8, bottom: 14 };
 
+function getReactAgentQrUrl() {
+  const target = new URL('/', window.location.origin).href;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(target)}`;
+}
+
 export default function DesktopQrDock() {
   const [qrImageSrc, setQrImageSrc] = useState('');
   const [isAppVisible, setIsAppVisible] = useState(false);
@@ -17,8 +22,7 @@ export default function DesktopQrDock() {
       }
     } catch { /* 保存データが壊れていても初期位置で表示する */ }
 
-    const modalQrImage = document.querySelector('#qrModal .qr-img-wrap img');
-    if (modalQrImage) setQrImageSrc(modalQrImage.currentSrc || modalQrImage.src);
+    setQrImageSrc(getReactAgentQrUrl());
 
     const app = document.getElementById('app');
     if (!app) return undefined;
