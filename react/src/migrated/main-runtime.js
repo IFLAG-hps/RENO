@@ -568,8 +568,24 @@ function applySession(data) {
     document.getElementById('userAvatarImg').src = sessionAvatar || '';
     document.getElementById('userMenuEmail').textContent = sessionEmail || '';
   }
+  configureLogoutMenu();
   if (!chatStarted) initChat();
   if (location.search) { try { window.history.replaceState(null, '', location.pathname); } catch (e) {} }
+}
+
+function configureLogoutMenu() {
+  const menuItems = Array.from(document.querySelectorAll('#menuSheet .menu-item'));
+  const lockItem = menuItems.find((item) => item.querySelector('.menu-item-label')?.textContent.trim() === 'ロック');
+  if (!lockItem || lockItem.dataset.logoutReady === 'true') return;
+  const logoutItem = lockItem.cloneNode(true);
+  logoutItem.dataset.logoutReady = 'true';
+  logoutItem.querySelector('.menu-item-label').textContent = 'ログアウト';
+  logoutItem.querySelector('.menu-item-desc').textContent = 'ログイン画面に戻る';
+  logoutItem.addEventListener('click', () => {
+    logoutApp();
+    closeMenuSheet();
+  });
+  lockItem.replaceWith(logoutItem);
 }
 
 function toggleUserMenu() {
@@ -795,9 +811,9 @@ function lockApp() {
   clearAuthSession();
   pinChecking = false;
   renderDots();
-  document.getElementById('pinScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('guestPinSection').style.display = 'none';
+  document.getElementById('pinScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('guestPinSection').style.display = '';
   document.getElementById('adminLoginSection').style.display = 'none';
   const avatarBtn = document.getElementById('userAvatarBtn');
   if (avatarBtn) avatarBtn.style.display = 'none';
@@ -806,7 +822,6 @@ function lockApp() {
   // URLに?pinが残っているとリロード時に再度ゲスト扱いになるので消しておく
   if (location.search) { try { window.history.replaceState(null, '', location.pathname); } catch (e) {} }
   if (supabaseAuth) supabaseAuth.auth.signOut().catch(() => {});
-  startDemoSession();
 }
 
 // ── Chat ──
