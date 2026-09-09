@@ -1,6 +1,6 @@
-# Basic認証の必須設定
+# Basic認証の廃止
 
-無制限モードを利用する場合、対象環境のサイト公開前にAmplify HostingのBasic認証を必ず有効にする。
+アプリ内のCognitoログインへ移行したため、Amplify HostingのBasic認証は有効化しない。
 
 Amplify Hostingの各ブランチで、Access controlを次の設定にする。
 
@@ -8,6 +8,6 @@ Amplify Hostingの各ブランチで、Access controlを次の設定にする。
 - `staging`: `Restricted - password required`
 - `main`: `Restricted - password required`
 
-Basic認証のユーザー名・パスワードはGitHub、ソースコード、`.env`へ保存せず、AmplifyのAccess control設定で管理する。
+ユーザー認証はCognito User Poolで行い、CognitoのアクセストークンをAPI側で検証する。
 
-Basic認証はサイトの入口を保護する認証であり、アプリ内の管理者権限とは別である。無制限モードは、Basic認証に加えてRENO内の管理者アカウント（Cognito認証）が成立した場合だけ、API側で有効になる。
+Basic認証の設定は不要であり、アプリ内ログインに成功した場合だけAPI側でアプリトークンを発行する。

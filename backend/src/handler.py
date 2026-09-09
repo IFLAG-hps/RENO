@@ -751,20 +751,6 @@ def lambda_handler(event, context):
         body = json.loads(event.get("body") or "{}")
         if not isinstance(body, dict): return response(400, {"error": "request body must be an object"})
         typ = body.get("type")
-        if typ == "demo_login":
-            # PINなしの動作デモ用。ブラウザごとに利用量を分けるため識別子をハッシュ化する。
-            demo_id = str(body.get("demo_id", "browser"))[:120]
-            subject = "demo:" + hashlib.sha256(demo_id.encode()).hexdigest()[:32]
-            return response(200, {"token": token_for(subject), "role": "guest", "label": "動作デモ"})
-        if typ == "verify_pin":
-            pin = str(body.get("pin", ""))
-            demo_pin = os.environ.get("DEMO_PIN", "").strip()
-            if demo_pin and pin == demo_pin:
-                return response(200, {"token": token_for("demo:" + pin), "role": "guest", "label": "デモ用PIN"})
-            item = TABLE.get_item(Key={"pk": "PIN#" + pin, "sk": "PIN"}).get("Item")
-            if not item or item.get("expires_at", 0) < int(time.time()) or item.get("uses", 0) >= item.get("max_uses", 0): return response(401, {"error": "invalid pin"})
-            TABLE.update_item(Key={"pk": "PIN#" + pin, "sk": "PIN"}, UpdateExpression="SET uses = uses + :one", ExpressionAttributeValues={":one": 1})
-            return response(200, {"token": token_for("guest:" + pin), "role": "guest", "label": item.get("label", "")})
         if typ == "cognito_login":
             access_token = str(body.get("access_token", ""))
             admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()

@@ -69,8 +69,6 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 
 | type | 用途 | 認証 | 成功ステータス |
 |---|---|---:|---:|
-| `demo_login` | デモセッション開始 | 不要 | 200 |
-| `verify_pin` | ゲストPIN認証 | 不要 | 200 |
 | `cognito_login` | 管理者Cognito認証 | 不要 | 200 |
 | `create_session` | 相談セッション作成 | 必要 | 201 |
 | `chat` | AIチャット | 必要 | 200 |
@@ -90,9 +88,6 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 | `generate_image` | 現在の写真をもとに画像生成ジョブを登録 | 必要 | 202 |
 | `image_generation_status` | 画像生成ジョブの状態を取得 | 必要 | 200 |
 | `handoff` | 担当者相談受付 | 必要 | 200 |
-| `create_guest_pin` | ゲストPIN発行 | 管理者のみ | 200 |
-| `get_guest_pins` | ゲストPIN一覧取得 | 管理者のみ | 200 |
-| `delete_guest_pin` | ゲストPIN削除 | 管理者のみ | 200 |
 | `save_case` | 施工事例保存 | 必要 | 200 |
 | `get_cases` | 施工事例一覧取得 | 必要 | 200 |
 | `delete_case` | 施工事例削除 | 必要 | 200 |
@@ -101,59 +96,12 @@ HTTPステータスはAPIごとに異なります。エラーコードやエラ�
 
 ### 認証方式の決定事項
 
-- 採用方式: ベーシック認証
-- 目的: MVP利用者が簡単に利用できること
-- 変更容易性: 認証処理を共通ミドルウェアまたは認証アダプターへ分離する
+- 採用方式: Amazon Cognito User Pool（画面内ログイン）
+- 目的: アプリ利用者をCognitoで認証し、APIには検証済みのアプリトークンだけを渡すこと
 - 業務APIが参照する情報: `userId`、`role`
 - パスワード保存: 平文保存しない。ハッシュ化または外部認証基盤で管理する
-- 通信: HTTPS必須。HTTPでベーシック認証情報を送信しない
-- 将来の変更候補: Cognito、JWT、APIキー
-
-### demo_login
-
-リクエスト:
-
-```json
-{
-  "type": "demo_login",
-  "demo_id": "browser-identifier"
-}
-```
-
-`demo_id`は最大120文字。省略時は`browser`です。
-
-レスポンス:
-
-```json
-{
-  "token": "{payload}.{signature}",
-  "role": "guest",
-  "label": "デモ"
-}
-```
-
-### verify_pin
-
-リクエスト:
-
-```json
-{
-  "type": "verify_pin",
-  "pin": "1234"
-}
-```
-
-レスポンス:
-
-```json
-{
-  "token": "string",
-  "role": "guest",
-  "label": "string"
-}
-```
-
-失敗時は`401 {"error":"invalid pin"}`です。
+- 通信: HTTPS必須
+- 変更容易性: 認証処理を共通ミドルウェアまたは認証アダプターへ分離する
 
 ### cognito_login
 
