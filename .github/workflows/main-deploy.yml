@@ -124,7 +124,6 @@ jobs:
             -e AWS_DEFAULT_REGION=ap-northeast-1 \
             -e OPENAI_API_KEY="" \
             -e PORT=3000 \
-            -e LOCAL_PIN=5678 \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace \
             python:3.12-slim \
@@ -135,8 +134,7 @@ jobs:
         env:
           RENO_API_URL: http://127.0.0.1:3000/agent
           RENO_MOCK_CHAT: "false"
-          E2E_PIN: "5678"
-          E2E_USE_REAL_API: "true"
+          E2E_USE_REAL_API: "false"
         run: |
           npm run build:config
           npm run test:e2e:local
