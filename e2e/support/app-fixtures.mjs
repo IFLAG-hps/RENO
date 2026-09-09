@@ -30,6 +30,13 @@ export async function installAppStubs(page) {
         },
       }),
     };
+    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+      localStorage.setItem('reno_auth_session_v1', JSON.stringify({
+        token: 'e2e-token',
+        role: 'guest',
+        savedAt: Date.now(),
+      }));
+    }
   });
 }
 
