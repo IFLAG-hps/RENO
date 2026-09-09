@@ -85,13 +85,27 @@ class LocalStackHandlerTest(unittest.TestCase):
         previous = self.handler.UNLIMITED_MODE
         try:
             self.handler.UNLIMITED_MODE = True
-            token = self.handler.token_for("unlimited-test")
+            token = self.handler.token_for("unlimited-test", "admin")
             usage = self.handler.lambda_handler({"body": json.dumps({"type": "get_usage", "token": token})}, None)
             payload = json.loads(usage["body"])
             self.assertEqual(usage["statusCode"], 200)
             self.assertEqual(payload["plan"], "unlimited")
             self.assertTrue(payload["unlimited"])
             self.assertIsNone(payload["remaining"])
+        finally:
+            self.handler.UNLIMITED_MODE = previous
+
+    def test_unlimited_mode_is_not_available_to_guest_tokens(self):
+        previous = self.handler.UNLIMITED_MODE
+        try:
+            self.handler.UNLIMITED_MODE = True
+            token = self.handler.token_for("guest-test", "guest")
+            usage = self.handler.lambda_handler({"body": json.dumps({"type": "get_usage", "token": token})}, None)
+            payload = json.loads(usage["body"])
+            self.assertEqual(usage["statusCode"], 200)
+            self.assertEqual(payload["plan"], "standard")
+            self.assertFalse(payload["unlimited"])
+            self.assertEqual(payload["remaining"], 10)
         finally:
             self.handler.UNLIMITED_MODE = previous
 
@@ -115,12 +129,141 @@ class LocalStackHandlerTest(unittest.TestCase):
             else:
                 os.environ["OPENAI_API_KEY"] = previous_key
 
+    def test_session_can_be_created_listed_reopened_and_extended(self):
+        previous_key = os.environ.get("OPENAI_API_KEY")
+        try:
+            os.environ["OPENAI_API_KEY"] = "   "
+            token = self.handler.token_for("session-history-test")
+            create = self.handler.lambda_handler({"body": json.dumps({
+                "type": "create_session",
+                "token": token,
+            })}, None)
+            self.assertEqual(create["statusCode"], 201)
+            session = json.loads(create["body"])["session"]
+            self.assertEqual(session["status"], "active")
+            session_id = session["sessionId"]
+
+            chat = self.handler.lambda_handler({"body": json.dumps({
+                "type": "chat",
+                "token": token,
+                "sessionId": session_id,
+                "messages": [{"role": "user", "content": "浴室を相談したい"}],
+            }, ensure_ascii=False)}, None)
+            self.assertEqual(chat["statusCode"], 200)
+            self.assertEqual(json.loads(chat["body"])["sessionId"], session_id)
+
+            listed = self.handler.lambda_handler({"body": json.dumps({
+                "type": "get_sessions",
+                "token": token,
+            })}, None)
+            self.assertEqual(listed["statusCode"], 200)
+            self.assertTrue(any(item["sessionId"] == session_id for item in json.loads(listed["body"])["sessions"]))
+
+            reopened = self.handler.lambda_handler({"body": json.dumps({
+                "type": "get_session",
+                "token": token,
+                "sessionId": session_id,
+            })}, None)
+            self.assertEqual(reopened["statusCode"], 200)
+            messages = json.loads(reopened["body"])["session"]["messages"]
+            self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
+            self.assertEqual(messages[0]["content"], "浴室を相談したい")
+        finally:
+            if previous_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = previous_key
+
+    def test_estimate_returns_server_side_cost_and_duration(self):
+        previous_key = os.environ.get("OPENAI_API_KEY")
+        try:
+            os.environ["OPENAI_API_KEY"] = "   "
+            token = self.handler.token_for("estimate-test")
+            result = self.handler.lambda_handler({"body": json.dumps({
+                "type": "estimate",
+                "token": token,
+                "size": "8",
+                "items": ["floor", "wall"],
+                "grade": "std",
+            })}, None)
+            self.assertEqual(result["statusCode"], 200)
+            payload = json.loads(result["body"])
+            self.assertEqual(payload["estimate"], {"low": 1170000, "high": 2280000})
+            self.assertEqual(payload["duration"], {"low": 1, "high": 2})
+            self.assertEqual(payload["subsidies"], [])
+            self.assertEqual(payload["source"], "fallback")
+            self.assertTrue(payload["warning"])
+        finally:
+            if previous_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = previous_key
+
+    def test_material_recommendation_exposes_fallback_state(self):
+        previous_key = os.environ.get("OPENAI_API_KEY")
+        try:
+            os.environ["OPENAI_API_KEY"] = "   "
+            token = self.handler.token_for("material-recommendation-test")
+            result = self.handler.lambda_handler({"body": json.dumps({
+                "type": "material_recommendation",
+                "token": token,
+                "selected_key": "composite",
+                "catalog": [{"key": "composite", "name": "複合フローリング", "pros": [], "cons": []}],
+                "context": [],
+            }, ensure_ascii=False)}, None)
+            self.assertEqual(result["statusCode"], 200)
+            payload = json.loads(result["body"])
+            self.assertEqual(payload["source"], "fallback")
+            self.assertTrue(payload["warning"])
+            self.assertEqual(payload["recommendations"][0]["key"], "composite")
+        finally:
+            if previous_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = previous_key
+
     def test_generated_tokens_are_stable(self):
         for index in range(100):
             token = self.handler.token_for(f"token-roundtrip-{index}")
             subject = self.handler.subject_from_token(token)
             self.assertIsNotNone(subject)
             self.assertEqual(subject["sub"], f"token-roundtrip-{index}")
+
+    def test_proposal_pdf_is_saved_to_s3_and_can_be_retrieved(self):
+        token = self.handler.token_for("proposal-storage-test")
+        create = self.handler.lambda_handler({"body": json.dumps({
+            "type": "create_proposal_upload_url",
+            "token": token,
+            "filename": "proposal.pdf",
+            "content_type": "application/pdf",
+        })}, None)
+        self.assertEqual(create["statusCode"], 200)
+        upload = json.loads(create["body"])
+        self.assertTrue(upload["key"].startswith("proposals/proposal-storage-test/"))
+
+        pdf_bytes = b"%PDF-1.4 localstack test"
+        self.s3.put_object(Bucket=BUCKET_NAME, Key=upload["key"], Body=pdf_bytes, ContentType="application/pdf")
+
+        saved = self.handler.lambda_handler({"body": json.dumps({
+            "type": "save_proposal",
+            "token": token,
+            "key": upload["key"],
+            "filename": "proposal.pdf",
+            "content_type": "application/pdf",
+            "size": len(pdf_bytes),
+        })}, None)
+        self.assertEqual(saved["statusCode"], 201)
+        proposal = json.loads(saved["body"])["proposal"]
+        self.assertEqual(proposal["size"], len(pdf_bytes))
+        self.assertTrue(proposal["downloadUrl"])
+
+        listed = self.handler.lambda_handler({"body": json.dumps({
+            "type": "get_proposals",
+            "token": token,
+        })}, None)
+        self.assertEqual(listed["statusCode"], 200)
+        proposals = json.loads(listed["body"])["proposals"]
+        self.assertTrue(any(item["id"] == proposal["id"] for item in proposals))
 
 
 if __name__ == "__main__":

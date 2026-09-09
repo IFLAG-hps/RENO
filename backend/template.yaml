@@ -13,14 +13,21 @@ Globals:
         ASSET_BUCKET: !Ref RenoAssetBucket
         OPENAI_API_KEY: !Ref OpenAIApiKey
         OPENAI_MODEL: !Ref OpenAIModel
+        OPENAI_IMAGE_MODEL: !Ref OpenAIImageModel
+        IMAGE_GENERATION_QUEUE_URL: !Ref ImageGenerationQueue
         SES_FROM_EMAIL: !Ref SesFromEmail
         SES_TO_EMAIL: !Ref SesToEmail
         TOKEN_SECRET: !Ref TokenSecret
         ADMIN_EMAIL: !Ref AdminEmail
         DEMO_PIN: !Ref DemoPin
         UNLIMITED_MODE: !Ref UnlimitedMode
+        DEPLOYMENT_ENVIRONMENT: !Ref Environment
 
 Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, production]
+    Description: Deployment environment used to isolate the stack resources.
   OpenAIApiKey:
     Type: String
     NoEcho: true
@@ -28,6 +35,9 @@ Parameters:
   OpenAIModel:
     Type: String
     Default: gpt-5-mini
+  OpenAIImageModel:
+    Type: String
+    Default: gpt-image-1
   SesFromEmail:
     Type: String
     Default: ''
@@ -48,6 +58,10 @@ Parameters:
     Type: String
     AllowedValues: ['true', 'false']
     Default: 'true'
+  LambdaExecutionRoleName:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]+$'
+    Description: Existing environment-specific IAM role name used by the Lambda function.
 
 Resources:
   RenoApi:
@@ -65,16 +79,7 @@ Resources:
       CodeUri: src/
       Handler: handler.lambda_handler
       ReservedConcurrentExecutions: 2
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref RenoTable
-        - S3CrudPolicy:
-            BucketName: !Ref RenoAssetBucket
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ses:SendEmail
-              Resource: '*'
+      Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LambdaExecutionRoleName}
       Events:
         Api:
           Type: Api
@@ -82,6 +87,23 @@ Resources:
             RestApiId: !Ref RenoApi
             Path: /agent
             Method: post
+
+  ImageGenerationWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handler.lambda_handler
+      Timeout: 900
+      ReservedConcurrentExecutions: 2
+      Role: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LambdaExecutionRoleName}
+      Events:
+        ImageGenerationQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ImageGenerationQueue.Arn
+            BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   RenoTable:
     Type: AWS::DynamoDB::Table
@@ -99,10 +121,19 @@ Resources:
           KeyType: RANGE
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
 
   RenoAssetBucket:
     Type: AWS::S3::Bucket
     Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD, PUT]
+            AllowedOrigins: ['*']
+            ExposedHeaders: [ETag]
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -112,11 +143,52 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ImageGenerationDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ImageGenerationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 5400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ImageGenerationDlq.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ImageGenerationQueueIamPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub reno-mvp-${Environment}-image-generation-sqs
+      Roles:
+        - !Ref LambdaExecutionRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ImageGenerationQueueAccess
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ImageGenerationQueue.Arn
 
   RenoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: reno-mvp-users
+      UserPoolName: !Sub reno-mvp-${Environment}-users
       AutoVerifiedAttributes: [email]
       UsernameAttributes: [email]
       MfaConfiguration: OPTIONAL
@@ -128,7 +200,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref RenoUserPool
-      ClientName: reno-mvp-web
+      ClientName: !Sub reno-mvp-${Environment}-web
       GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
@@ -149,3 +221,5 @@ Outputs:
     Value: !Ref RenoUserPoolClient
   AssetBucket:
     Value: !Ref RenoAssetBucket
+  DeploymentEnvironment:
+    Value: !Ref Environment

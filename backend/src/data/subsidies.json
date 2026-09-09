@@ -1,0 +1,18 @@
+[
+  {
+    "id": "jutaku-shoene-2026",
+    "name": "住宅省エネ2026キャンペーン（リフォーム）",
+    "eligible_signals": ["window", "insulation", "water_heater"],
+    "application_by": "登録済みのリフォーム事業者等",
+    "updated_at": "2026-03-30",
+    "source_url": "https://jutaku-shoene2026.mlit.go.jp/about/reform.html"
+  },
+  {
+    "id": "mado-renovation-2026",
+    "name": "先進的窓リノベ2026事業",
+    "eligible_signals": ["window"],
+    "application_by": "登録済みの窓リノベ事業者",
+    "updated_at": "2026-06-29",
+    "source_url": "https://window-renovation2026.env.go.jp/"
+  }
+]

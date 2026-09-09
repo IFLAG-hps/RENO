@@ -1,33 +1,38 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import legacyMarkup from '../generated/legacy-markup.js';
-import '../generated/legacy.css';
+import { useEffect } from 'react';
+import MainPage from './migrated/main.jsx';
+import AgentPage from './migrated/agent.jsx';
+import RevenuePage from './migrated/revenue.jsx';
+import MockupPage from './migrated/mockup.jsx';
+import DesktopQrDock from './DesktopQrDock.jsx';
+import './migrated/main.css';
+
+const pages = {
+  '/pages/agent.html': AgentPage,
+  '/pages/agent': AgentPage,
+  '/pages/revenue.html': RevenuePage,
+  '/pages/revenue': RevenuePage,
+  '/pages/mockup.html': MockupPage,
+  '/pages/mockup': MockupPage,
+};
 
 export default function App() {
-  const hostRef = useRef(null);
-  const [error, setError] = useState('');
+  const Page = pages[window.location.pathname] ?? MainPage;
 
-  useLayoutEffect(() => {
-    const host = hostRef.current;
-    host.innerHTML = legacyMarkup;
+  useEffect(() => {
+    if (Page === AgentPage) import('./migrated/agent.css');
+    if (Page === RevenuePage) import('./migrated/revenue.css');
+    if (Page === MockupPage) import('./migrated/mockup.css');
 
-    // 現行画面のグローバル関数と初期化順序を保つため、DOM描画後に従来スクリプトを起動する。
-    const script = document.createElement('script');
-    script.src = '/legacy-bootstrap.js';
-    script.dataset.renoLegacy = 'true';
-    script.onload = () => {
-      document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true }));
-      window.dispatchEvent(new Event('load'));
-    };
-    script.onerror = () => setError('画面の初期化に失敗しました。再読み込みしてください。');
-    document.body.appendChild(script);
+    if (Page === MainPage) {
+      import('./migrated/main-runtime.js').then(() => {
+        document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true }));
+        window.dispatchEvent(new Event('load'));
+      });
+    }
+  }, [Page]);
 
-    return () => script.remove();
-  }, []);
-
-  return (
-    <>
-      {error && <div role="alert" className="react-bootstrap-error">{error}</div>}
-      <div ref={hostRef} className="react-legacy-host" />
-    </>
-  );
+  return <>
+    <Page />
+    {Page === MainPage && <DesktopQrDock />}
+  </>;
 }

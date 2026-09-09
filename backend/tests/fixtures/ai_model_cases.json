@@ -1,0 +1,35 @@
+[
+  {
+    "id": "living-floor-001",
+    "image": "fixtures/images/living-floor-001.jpg",
+    "expected_room": "living",
+    "area": "floor",
+    "expected_issue": "surface_wear",
+    "expected_severity": "medium",
+    "expected_material_key": "floor-001",
+    "input_tokens": 2000,
+    "output_tokens": 300
+  },
+  {
+    "id": "living-wall-001",
+    "image": "fixtures/images/living-wall-001.jpg",
+    "expected_room": "living",
+    "area": "wall",
+    "expected_issue": "stain",
+    "expected_severity": "low",
+    "expected_material_key": "wall-001",
+    "input_tokens": 2000,
+    "output_tokens": 300
+  },
+  {
+    "id": "bedroom-window-001",
+    "image": "fixtures/images/bedroom-window-001.jpg",
+    "expected_room": "bedroom",
+    "area": "window",
+    "expected_issue": "insulation_concern",
+    "expected_severity": "medium",
+    "expected_material_key": "window-001",
+    "input_tokens": 2000,
+    "output_tokens": 300
+  }
+]

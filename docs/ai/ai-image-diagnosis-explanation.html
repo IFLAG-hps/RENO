@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>RENO 画像AI診断 要件説明</title>
+<style>
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Yu Gothic", "Meiryo", sans-serif; color: #1f2937; background: #e5e7eb; }
+.page { width: 297mm; height: 210mm; padding: 18mm 20mm; background: #fff; page-break-after: always; position: relative; overflow: hidden; }
+.page:last-child { page-break-after: auto; }
+.eyebrow { color: #a36b2c; font-size: 15px; font-weight: 700; letter-spacing: .12em; }
+h1 { margin: 18mm 0 7mm; font-size: 42px; line-height: 1.2; color: #172033; }
+h2 { margin: 5mm 0 10mm; font-size: 29px; line-height: 1.25; color: #172033; }
+h3 { margin: 0 0 4mm; font-size: 20px; color: #a36b2c; }
+p, li { font-size: 17px; line-height: 1.65; }
+.lead { font-size: 23px; line-height: 1.55; max-width: 900px; }
+.footer { position: absolute; left: 20mm; right: 20mm; bottom: 10mm; display: flex; justify-content: space-between; color: #9ca3af; font-size: 12px; }
+.accent { border-left: 7px solid #c58a4a; padding: 5mm 7mm; background: #fbf7f1; margin-top: 12mm; }
+.flow { display: flex; align-items: center; gap: 10px; margin: 15mm 0; }
+.step { flex: 1; padding: 8mm 5mm; min-height: 52mm; background: #f4f6f8; border-top: 5px solid #c58a4a; }
+.step strong { display: block; font-size: 19px; margin-bottom: 4mm; }
+.arrow { font-size: 27px; color: #c58a4a; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; }
+.box { padding: 7mm; background: #f7f8fa; border: 1px solid #e5e7eb; }
+.good { border-left: 6px solid #4d9b72; }
+.warn { border-left: 6px solid #c58a4a; }
+.bad { border-left: 6px solid #c05040; }
+.quote { font-size: 21px; line-height: 1.6; color: #374151; padding: 8mm; background: #fbf7f1; margin: 10mm 0; }
+table { width: 100%; border-collapse: collapse; margin-top: 5mm; }
+th, td { border-bottom: 1px solid #d1d5db; padding: 4mm 3mm; text-align: left; font-size: 16px; line-height: 1.45; }
+th { color: #a36b2c; background: #fbf7f1; }
+.small { font-size: 13px; color: #6b7280; line-height: 1.5; }
+ul { margin-top: 3mm; }
+@media screen { .page { margin: 18px auto; box-shadow: 0 3px 15px #9ca3af; } }
+</style>
+</head>
+<body>
+<section class="page">
+  <div class="eyebrow">RENO / REQUIREMENTS BRIEF</div>
+  <h1>画像AI診断を<br>「参考判定」として実装する</h1>
+  <p class="lead">写真から見える内装の状態を整理し、素材提案・概算・施工後イメージにつなげる。</p>
+  <div class="accent"><strong>今回の確認ポイント</strong><br>画像AIには実用例がある。ただし、画像だけで経年数や原因を断定する仕組みではない。</div>
+  <div class="footer"><span>上長説明用</span><span>2026-09-07</span></div>
+</section>
+
+<section class="page">
+  <div class="eyebrow">01 / POSITIONING</div>
+  <h2>画像から判定できる範囲を限定する</h2>
+  <div class="quote">「経年劣化 中」「劣化 大」は、現地調査の結果ではなく、写真から見える状態に基づくAIの参考判定。</div>
+  <div class="cols">
+    <div class="box good"><h3>画像で扱いやすいもの</h3><ul><li>壁紙の浮き・剥がれ・黄ばみ</li><li>床の擦り傷・へこみ・変色</li><li>建具の色あせ・傷</li><li>シミ・黒ずみなどの外観</li></ul></div>
+    <div class="box bad"><h3>画像だけでは断定しないもの</h3><ul><li>劣化の正確な年数・原因</li><li>内部の腐食・漏水</li><li>安全性・修繕の緊急度</li><li>正確な工事費</li></ul></div>
+  </div>
+  <div class="footer"><span>RENO 画像AI診断 要件説明</span><span>2</span></div>
+</section>
+
+<section class="page">
+  <div class="eyebrow">02 / EVIDENCE</div>
+  <h2>建物点検では、画像AIの実用例が存在する</h2>
+  <p>既存の実例は、主にコンクリートや外壁の「見える変状」を対象にしている。</p>
+  <div class="flow">
+    <div class="step"><strong>撮影</strong>スマートフォン・連続写真・ドローンなどで対象を撮影</div><div class="arrow">→</div>
+    <div class="step"><strong>画像解析</strong>ひび割れや変状を検出・分類・計測</div><div class="arrow">→</div>
+    <div class="step"><strong>人が確認</strong>AI結果を点検者が確認し、最終判断に利用</div>
+  </div>
+  <div class="accent"><strong>RENOへの示唆</strong><br>住宅内装でも「部材」「見える状態」「劣化度の目安」を出す設計は可能。ただし、最終的な施工判断は現地確認につなげる。</div>
+  <div class="footer"><span>出典：国土交通省 技術資料・点検支援事例</span><span>3</span></div>
+</section>
+
+<section class="page">
+  <div class="eyebrow">03 / RENO FLOW</div>
+  <h2>RENOでは、診断結果を次の体験へつなげる</h2>
+  <div class="flow">
+    <div class="step"><strong>1. 写真保存</strong>S3へ画像本体、DynamoDBへ写真メタ情報</div><div class="arrow">→</div>
+    <div class="step"><strong>2. AI分析</strong>LambdaがS3画像をOpenAIへ渡し、診断結果を取得</div><div class="arrow">→</div>
+    <div class="step"><strong>3. 次の提案</strong>素材提案・概算・施工後イメージへ連携</div>
+  </div>
+  <table><tr><th>画面表示</th><th>例</th></tr><tr><td>対象部材</td><td>壁紙（クロス）、床材、建具（ドア枠）</td></tr><tr><td>状態説明</td><td>継ぎ目の浮き・黄ばみが見られます</td></tr><tr><td>劣化度</td><td>軽度 / 中度 / 重度</td></tr><tr><td>注意書き</td><td>AIによる参考判定。現地確認で結果が変わる場合があります。</td></tr></table>
+  <div class="footer"><span>現在の実装対象：analyze_photo</span><span>4</span></div>
+</section>
+
+<section class="page">
+  <div class="eyebrow">04 / OPEN DECISIONS</div>
+  <h2>正式仕様として、ここは相談して決めたい</h2>
+  <table><tr><th>論点</th><th>決める内容</th><th>推奨案</th></tr><tr><td>対象範囲</td><td>診断する部材と最大件数</td><td>内装3〜5項目から開始</td></tr><tr><td>劣化度</td><td>軽度・中度・重度の基準</td><td>画像上の見え方による相対評価</td></tr><tr><td>信頼度</td><td>confidenceを表示・保存するか</td><td>内部保存し、低信頼時は注意表示</td></tr><tr><td>連携</td><td>概算・生成の入力に使うか</td><td>提案の補助情報として利用</td></tr><tr><td>最終判断</td><td>現地確認への誘導</td><td>必ず参考判定と明記</td></tr></table>
+  <div class="accent"><strong>合意事項</strong><br>診断は「施工判断」ではなく、「ユーザーが次の相談行動を選ぶための補助情報」として位置付ける。</div>
+  <div class="footer"><span>RENO 画像AI診断 要件説明</span><span>5</span></div>
+</section>
+
+<section class="page">
+  <div class="eyebrow">05 / PROPOSAL</div>
+  <h2>まずは、検証可能な最小仕様で進める</h2>
+  <div class="cols">
+    <div class="box good"><h3>今回のMVP</h3><ul><li>S3上の写真をAIへ渡す</li><li>部材・状態・劣化度をJSONで取得</li><li>画面に参考判定として表示</li><li>DynamoDBの写真レコードへ保存</li></ul></div>
+    <div class="box warn"><h3>後続で拡張</h3><ul><li>信頼度・再分析履歴</li><li>判定基準のチューニング</li><li>概算・生成への自動連携</li><li>人による確認フロー</li></ul></div>
+  </div>
+  <div class="accent"><strong>次のアクション</strong><br>合意した位置付けと出力項目で、dev環境に実装を反映し、実画像を使った表示・失敗時・自然言語指定の検証へ進む。</div>
+  <p class="small">参考：国土交通省「AIによる判定結果（劣化要因）の例」／「ひびナビAI」／「空中ドローン・画像診断AIサービスによるひび割れ調査」</p>
+  <div class="footer"><span>RENO 画像AI診断 要件説明</span><span>6</span></div>
+</section>
+</body>
+</html>

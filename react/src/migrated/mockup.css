@@ -1,0 +1,135 @@
+
+:root{
+  --bg:#fafaf8;--bg2:#f4f2ee;--bg3:#eeeae3;
+  --white:#ffffff;
+  --text:#1a1814;--text2:#4a4540;--muted:#9a9490;
+  --border:#e0dbd3;--border2:#d0cbc2;
+  --gold:#a07838;--gold-l:#c8a96e;--gold-bg:#fdf8f0;
+  --green:#4a9a5a;--red:#c05040;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg2);font-family:'DM Sans','Hiragino Sans',sans-serif;color:var(--text);}
+.phone{max-width:420px;margin:0 auto;min-height:100vh;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,0.06);}
+
+/* header */
+.head{padding:16px 18px 14px;border-bottom:1px solid var(--border);background:var(--white);}
+.head-top{display:flex;align-items:baseline;gap:8px;}
+.logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;letter-spacing:0.1em;}
+.badge{font-size:9px;color:var(--gold);letter-spacing:0.16em;text-transform:uppercase;border:1px solid rgba(160,120,56,0.3);padding:2px 6px;border-radius:3px;}
+.sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:0.02em;}
+
+/* tabs */
+.tabs{display:flex;gap:6px;padding:12px 14px;background:var(--white);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{flex-shrink:0;font-size:11.5px;padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;letter-spacing:0.02em;white-space:nowrap;transition:all .15s;}
+.tab.active{background:var(--text);border-color:var(--text);color:var(--white);}
+
+/* chat area */
+.chat{flex:1;padding:18px 14px 40px;display:flex;flex-direction:column;gap:14px;}
+.msg{display:flex;gap:9px;max-width:100%;}
+.msg.user{flex-direction:row-reverse;}
+.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.avatar.agent{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);color:var(--gold);}
+.avatar.user{background:var(--bg2);border:1px solid var(--border);color:var(--text2);}
+.bubble{max-width:82%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;}
+.bubble.agent{background:var(--white);border:1px solid var(--border);color:var(--text2);box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.bubble.user{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.2);color:var(--gold);}
+
+.panel{display:none;}
+.panel.active{display:flex;flex-direction:column;gap:14px;}
+
+/* ── shared card ── */
+.card{background:var(--white);border:1px dashed var(--border2);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;}
+.card-title{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;letter-spacing:0.03em;margin-bottom:12px;color:var(--text);}
+.card-title svg{flex-shrink:0;color:var(--gold);}
+.new-tag{font-size:9px;color:var(--muted);letter-spacing:0.04em;margin-left:auto;font-weight:400;}
+.card::after{content:'sample';position:absolute;top:10px;right:14px;font-size:8.5px;color:var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'DM Sans',sans-serif;}
+
+/* ── 1. 画像診断 ── */
+.diag-photo{width:100%;height:150px;border-radius:8px;background:linear-gradient(135deg,#ded6c8,#c9bfae);position:relative;overflow:hidden;margin-bottom:12px;}
+.diag-scan{position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(160,120,56,0.25),transparent);height:40%;animation:scan 2.6s ease-in-out infinite;}
+@keyframes scan{0%{top:-40%}50%{top:100%}100%{top:-40%}}
+.diag-photo-label{position:absolute;bottom:8px;left:10px;font-size:10px;color:#fff;background:rgba(0,0,0,0.35);padding:3px 8px;border-radius:5px;letter-spacing:0.03em;}
+.diag-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bg2);}
+.diag-row:last-child{border-bottom:none;}
+.diag-part{font-size:12.5px;color:var(--text);}
+.diag-part-sub{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.sev{font-size:10px;padding:3px 9px;border-radius:12px;letter-spacing:0.02em;font-weight:500;flex-shrink:0;}
+.sev.low{background:#eef5ee;color:var(--green);}
+.sev.mid{background:var(--gold-bg);color:var(--gold);}
+.sev.high{background:#fbeeec;color:var(--red);}
+.diag-note{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.6;background:var(--bg);padding:9px 11px;border-radius:8px;}
+.diag-intro{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;}
+.diag-upload{border:1px dashed var(--gold-l);background:var(--gold-bg);border-radius:9px;padding:18px 12px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s;}
+.diag-upload:hover{background:#fbf1df;border-color:var(--gold);}
+.diag-upload-icon{font-size:25px;line-height:1;margin-bottom:8px;}
+.diag-upload-title{font-size:12.5px;color:var(--text);font-weight:500;}
+.diag-upload-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.diag-actions{display:flex;gap:8px;margin-top:9px;}
+.diag-btn{flex:1;padding:9px 8px;border-radius:7px;border:1px solid var(--border);background:var(--white);color:var(--text2);font:inherit;font-size:11px;cursor:pointer;}
+.diag-btn.primary{background:var(--text);border-color:var(--text);color:var(--white);}
+.diag-btn:hover{opacity:.84;}
+.diag-hidden{display:none;}
+.diag-status{font-size:11px;color:var(--gold);background:var(--gold-bg);border-radius:7px;padding:9px 10px;margin-bottom:10px;}
+.diag-status strong{color:var(--text);font-weight:500;}
+.diag-summary{display:flex;justify-content:space-between;align-items:center;margin:10px 0 3px;}
+.diag-summary-title{font-size:12px;font-weight:600;color:var(--text);}
+.diag-confidence{font-size:9.5px;color:var(--muted);}
+.diag-cta{display:flex;gap:8px;margin-top:12px;}
+.diag-cta .diag-btn{background:var(--gold-bg);border-color:rgba(160,120,56,.25);color:var(--gold);}
+
+/* ── 2. RAGカタログ ── */
+.mat-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--bg2);}
+.mat-item:last-child{border-bottom:none;}
+.mat-thumb{width:52px;height:52px;border-radius:7px;background:var(--bg2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:9px;}
+.mat-info{flex:1;min-width:0;}
+.mat-maker{font-size:9.5px;color:var(--gold);letter-spacing:0.04em;margin-bottom:2px;}
+.mat-name{font-size:12.5px;color:var(--text);font-weight:500;}
+.mat-meta{font-size:10.5px;color:var(--muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;}
+.mat-case{font-size:9.5px;background:var(--bg2);color:var(--text2);padding:2px 7px;border-radius:9px;}
+.rag-source{margin-top:12px;font-size:10px;color:var(--muted);border-top:1px dashed var(--border);padding-top:9px;display:flex;justify-content:space-between;align-items:center;}
+.rag-source a{color:var(--gold);text-decoration:none;}
+
+/* RAG retrieval steps */
+.rag-steps{display:flex;flex-direction:column;gap:7px;margin-bottom:2px;}
+.rag-step{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);opacity:0;animation:rag-in .4s ease forwards;}
+.rag-step:nth-child(1){animation-delay:.15s;}
+.rag-step:nth-child(2){animation-delay:.6s;}
+.rag-step:nth-child(3){animation-delay:1.05s;}
+.rag-step:nth-child(4){animation-delay:1.5s;color:var(--gold);font-weight:500;}
+@keyframes rag-in{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+.rag-check{width:14px;height:14px;border-radius:50%;background:#eef5ee;color:var(--green);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
+.rag-count{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--gold);}
+
+.rag-divider{font-size:9.5px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin:14px 0 9px;padding-top:12px;border-top:1px dashed var(--border);}
+.snippet{background:var(--bg);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:11px;color:var(--text2);line-height:1.6;position:relative;}
+.snippet:last-of-type{margin-bottom:0;}
+.snippet-num{display:inline-flex;width:15px;height:15px;background:var(--gold);color:#fff;border-radius:4px;font-size:9px;align-items:center;justify-content:center;margin-right:6px;flex-shrink:0;vertical-align:middle;}
+.snippet-src{display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:var(--muted);}
+.snippet-rel{color:var(--gold);font-weight:500;}
+.cite{display:inline-flex;width:14px;height:14px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(160,120,56,0.25);border-radius:4px;font-size:8.5px;align-items:center;justify-content:center;margin-left:5px;vertical-align:middle;}
+
+/* ── 3. 見積+工期+補助金 ── */
+.est-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.est-box{background:var(--bg);border-radius:8px;padding:11px;text-align:center;}
+.est-box-label{font-size:10px;color:var(--muted);letter-spacing:0.03em;margin-bottom:5px;}
+.est-box-val{font-size:15px;font-weight:600;color:var(--text);}
+.est-box-val small{font-size:10px;color:var(--muted);font-weight:400;}
+.subsidy-item{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--gold-bg);border:1px solid rgba(160,120,56,0.15);border-radius:8px;margin-bottom:7px;}
+.subsidy-item:last-child{margin-bottom:0;}
+.subsidy-name{font-size:12px;color:var(--text);}
+.subsidy-name-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.subsidy-match{font-size:11px;font-weight:600;color:var(--gold);flex-shrink:0;margin-left:10px;}
+.est-note{margin-top:11px;font-size:10.5px;color:var(--muted);line-height:1.6;}
+
+/* ── 4. CRM連携 ── */
+.crm-status{display:flex;align-items:center;gap:8px;margin-bottom:13px;}
+.crm-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.crm-status-text{font-size:12px;color:var(--green);font-weight:500;}
+.crm-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg2);font-size:12px;}
+.crm-row:last-of-type{border-bottom:none;}
+.crm-row-label{color:var(--muted);}
+.crm-row-val{color:var(--text);font-weight:500;text-align:right;}
+.crm-btn{width:100%;margin-top:13px;padding:11px;border-radius:8px;border:none;background:var(--text);color:#fff;font-size:12.5px;font-family:inherit;letter-spacing:0.03em;cursor:pointer;}
+.crm-badge{font-size:9.5px;background:#eef5ee;color:var(--green);padding:2px 8px;border-radius:9px;letter-spacing:0.02em;}
+
+.section-note{font-size:10.5px;color:var(--muted);text-align:center;padding:10px 20px 0;line-height:1.7;}

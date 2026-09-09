@@ -3,9 +3,9 @@
   "scripts": {
     "build:config": "node scripts/generate-config.mjs",
     "build:react": "node scripts/build-react.mjs",
+    "serve:local-backend": "powershell -ExecutionPolicy Bypass -File scripts/start-local-backend.ps1",
     "serve:frontend": "node scripts/static-server.mjs",
     "serve:react": "node scripts/static-server.mjs dist",
-    "serve:legacy": "node scripts/static-server.mjs . 4174",
     "test:e2e": "npm run build:react && playwright test",
     "test:workflows": "node scripts/validate-workflows.mjs"
   },
