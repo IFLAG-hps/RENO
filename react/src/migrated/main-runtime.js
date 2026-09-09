@@ -384,19 +384,9 @@ const AUTH_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 // ページ読み込み時に必ずpinCheckingをリセット
 window.addEventListener('load', async () => {
   pinChecking = false; pinValue = ''; renderDots();
-  // URL PINを最優先し、それ以外はGoogleセッション→保存済みセッションの順に復元
-  const urlPin = (new URLSearchParams(location.search).get('pin') || '').replace(/\D/g, '');
-  if (urlPin.length === 4) {
-    initLoginView();
-    return;
-  }
   const googleHandled = await handleGoogleRedirect();
   if (googleHandled || restoreCachedSession()) return;
-  if (urlPin.length === 4) {
-    initLoginView();
-  } else {
-    startDemoSession();
-  }
+  initLoginView();
 });
 
 function saveAuthSession(data) {
@@ -430,51 +420,31 @@ function clearAuthSession() {
 }
 
 function initLoginView() {
-  const params = new URLSearchParams(location.search);
-  const urlPin = (params.get('pin') || '').replace(/\D/g, '');
-  if (urlPin.length === 4) {
-    document.getElementById('pinScreen').style.display = 'flex';
-    showGuestPinManually();
-    pinValue = urlPin;
-    renderDots();
-    setTimeout(checkPin, 300);
+  document.getElementById('pinScreen').style.display = 'flex';
+  document.getElementById('guestPinSection')?.remove();
+  document.getElementById('gpinMenuItem')?.remove();
+  document.getElementById('guestPinPanel')?.remove();
+  document.getElementById('adminLoginSection').style.display = '';
+  const section = document.getElementById('adminLoginSection');
+  if (section && !section.querySelector('.cognito-login-title')) {
+    const title = document.createElement('div');
+    title.className = 'cognito-login-title';
+    title.textContent = 'ログイン';
+    section.prepend(title);
   }
-}
-
-function showGuestPinManually() {
-  document.getElementById('guestPinSection').style.display = '';
-  // PIN付きURLで入った場合も、管理者は同じ画面からログインできるようにする。
-  document.getElementById('adminLoginSection').style.display = 'none';
-}
-
-async function startDemoSession() {
-  if (!EDGE_URL) {
-    applySession({ token: 'demo-local', role: 'guest', label: '動作デモ' });
-    return;
-  }
-  try {
-    const demoId = safeLocalGet('reno_demo_id', '') || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
-    safeLocalSet('reno_demo_id', demoId);
-    const res = await fetchWithTimeout(EDGE_URL, {
-      method: 'POST',
-      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'demo_login', demo_id: demoId })
-    }, 15000);
-    const data = await res.json();
-    if (!res.ok || !data.token) throw new Error(data.error || 'デモセッションを開始できません');
-    applySession(data);
-  } catch (error) {
-    console.error(error);
-    const status = document.getElementById('googleLoginStatus');
-    if (status) status.textContent = 'デモを開始できません。時間をおいて再読み込みしてください。';
-  }
+  const button = document.getElementById('googleLoginBtn');
+  if (button) button.lastChild.textContent = 'ログイン';
+  document.getElementById('adminEmailInput')?.focus();
 }
 
 // PC keyboard support
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('pinScreen').style.display === 'none') return;
-  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
-  else if (e.key === 'Backspace') pinDel();
+  if (e.key === 'Enter' && document.getElementById('adminLoginSection').style.display !== 'none') {
+    e.preventDefault();
+    loginWithCognito();
+    return;
+  }
 });
 
 function pinKey(k) {
@@ -493,7 +463,6 @@ function pinKey(k) {
   if (pinValue.length >= 4) return;
   pinValue += k;
   renderDots();
-  if (pinValue.length === 4) setTimeout(checkPin, 120);
 }
 
 function pinDel() {
@@ -633,31 +602,6 @@ async function switchGoogleAccount() {
   clearAuthSession();
   if (supabaseAuth) await supabaseAuth.auth.signOut().catch(() => {});
   loginWithGoogle(true);
-}
-
-async function checkPin() {
-  if (pinChecking) return;
-  pinChecking = true;
-  renderDots('loading');
-  try {
-    const res = await fetch(EDGE_URL, {
-      method: 'POST',
-      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'verify_pin', pin: pinValue }),
-    });
-    const data = await res.json();
-    if (res.ok && data.token) {
-      applySession(data);
-      pinChecking = false;
-    } else {
-      renderDots('error');
-      setTimeout(() => { pinValue = ''; renderDots(); pinChecking = false; }, 800);
-    }
-  } catch(e) {
-    // ネットワークエラー時もリセット
-    renderDots('error');
-    setTimeout(() => { pinValue = ''; renderDots(); pinChecking = false; }, 800);
-  }
 }
 
 // ── Google ログイン（管理者専用） ──
@@ -830,18 +774,28 @@ function resetClientCache() {
 
 function lockApp() {
   pinValue = '';
-  sessionToken = '';
+        sessionToken = '';
   sessionRole = '';
   sessionEmail = '';
   sessionLabel = '';
   sessionAvatar = '';
+  cognitoChallengeSession = '';
+  cognitoUsername = '';
+  cognitoChallengeName = '';
   clearAuthSession();
   pinChecking = false;
   renderDots();
   document.getElementById('pinScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('guestPinSection').style.display = '';
-  document.getElementById('adminLoginSection').style.display = 'none';
+  document.getElementById('guestPinSection')?.remove();
+  document.getElementById('adminLoginSection').style.display = '';
+  document.getElementById('adminPasswordInput').value = '';
+  document.getElementById('adminNewPasswordInput').value = '';
+  document.getElementById('adminMfaInput').value = '';
+  const loginStatus = document.getElementById('googleLoginStatus');
+  if (loginStatus) loginStatus.textContent = '';
+  const loginButton = document.getElementById('googleLoginBtn');
+  if (loginButton) loginButton.lastChild.textContent = 'ログイン';
   const avatarBtn = document.getElementById('userAvatarBtn');
   if (avatarBtn) avatarBtn.style.display = 'none';
   const userMenu = document.getElementById('userMenu');
@@ -2875,11 +2829,7 @@ async function fetchUsage() {
     if (!res.ok || !Number.isFinite(Number(data?.count)) || !Number.isFinite(Number(data?.limit))) {
       if (res.status === 401) {
         clearAuthSession();
-        if (sessionRole === 'guest') {
-          sessionToken = '';
-          await startDemoSession();
-          return;
-        }
+        sessionToken = '';
       }
       const el = document.getElementById('usageBadge');
       if (el) el.textContent = '利用回数を確認できません';
@@ -3754,4 +3704,4 @@ function addRollbackButton() {
 }
 
 
-Object.assign(window, { fetchWithTimeout, safeLocalGet, safeLocalSet, initAudioCtx, toggleSE, playSound, initIconPicker, getSelectedChar, openQrModal, closeQrModal, switchQrTab, copyQrUrl, copyUrlAndNotify, saveAuthSession, restoreCachedSession, clearAuthSession, initLoginView, showGuestPinManually, startDemoSession, pinKey, pinDel, renderDots, escapeHTML, safeImageSrc, escapeJSString, applySession, toggleUserMenu, switchGoogleAccount, checkPin, cognitoRequest, loginWithCognito, loginWithGoogle, handleGoogleRedirect, openAdminLogin, logoutApp, resetClientCache, lockApp, chatCacheKey, chatStateKey, persistChatHistory, persistChatState, persistCurrentChatState, restoreChatState, clearDraftCache, resetConversation, restoreCachedChat, restoreInteractiveSuggestions, initChat, autoResize, scrollBottom, getIconForEmotion, getAgentIconHTML, removeSuggestions, renderSuggestions, tapChip, addUserMessage, addTyping, removeTyping, showUploadCard, useSampleImage, handlePhoto, showIdealImageCard, startPhotoDiagnosis, startCatalogFromDiagnosis, startEstimateFromDiagnosis, startGenerationFromPhoto, getHandoffSummary, handoffToStaff, submitHandoff, startProposalFlow, handleIdealPhoto, generateWithFiles, getFallbackImage, srcToBlob, shareViaLine, shareNative, renderMaterialCandidates, requestMaterialRecommendation, stars, showMaterial, generateNight, showDayNight, switchDN, getMockConversationSummary, fetchConversationSummary, getPdfConversationSummary, generatePDF, calcCost, fmtMoney, updateSimResult, getEstimateCacheKey, readEstimateCache, writeEstimateCache, applyEstimateResult, requestEstimate, getEstimateDurationLabel, showSimulator, simSetSize, simToggleItem, simSetGrade, refreshSim, showFinalConfirmation, completeFinalConsultation, reselectEstimate, returnToEarlierStep, simConfirm, fetchUsage, renderUsageBadge, updateUsageAfterGen, showUpgradeModal, closeUpgradeModal, openGuestPinPanel, closeGuestPinPanel, closeGuestPinOuter, renderGpinPanel, gpinSetDays, gpinSetUses, issueGuestPin, showGpinResult, copyGpinUrl, generateQR, copyGpinInfo, shareGpin, loadGuestPins, deleteGuestPin, openMenuSheet, closeMenuSheet, closeMenuOuter, openCasesPanel, closeCasesPanel, closeCasesOuter, switchCasesTab, renderCasesTab, renderUploadForm, previewCaseImg, submitCase, renderCasesList, deleteCase, showCases, autoSaveSession, openHistoryPanel, resumeSession, closeHistoryPanel, closeHistory, showQuickForm, render, sendMessage, getMockAgentResponse, callAgent });
+Object.assign(window, { fetchWithTimeout, safeLocalGet, safeLocalSet, initAudioCtx, toggleSE, playSound, initIconPicker, getSelectedChar, openQrModal, closeQrModal, switchQrTab, copyQrUrl, copyUrlAndNotify, saveAuthSession, restoreCachedSession, clearAuthSession, initLoginView, pinKey, pinDel, renderDots, escapeHTML, safeImageSrc, escapeJSString, applySession, toggleUserMenu, switchGoogleAccount, cognitoRequest, loginWithCognito, loginWithGoogle, handleGoogleRedirect, openAdminLogin, logoutApp, resetClientCache, lockApp, chatCacheKey, chatStateKey, persistChatHistory, persistChatState, persistCurrentChatState, restoreChatState, clearDraftCache, resetConversation, restoreCachedChat, restoreInteractiveSuggestions, initChat, autoResize, scrollBottom, getIconForEmotion, getAgentIconHTML, removeSuggestions, renderSuggestions, tapChip, addUserMessage, addTyping, removeTyping, showUploadCard, useSampleImage, handlePhoto, showIdealImageCard, startPhotoDiagnosis, startCatalogFromDiagnosis, startEstimateFromDiagnosis, startGenerationFromPhoto, getHandoffSummary, handoffToStaff, submitHandoff, startProposalFlow, handleIdealPhoto, generateWithFiles, getFallbackImage, srcToBlob, shareViaLine, shareNative, renderMaterialCandidates, requestMaterialRecommendation, stars, showMaterial, generateNight, showDayNight, switchDN, getMockConversationSummary, fetchConversationSummary, getPdfConversationSummary, generatePDF, calcCost, fmtMoney, updateSimResult, getEstimateCacheKey, readEstimateCache, writeEstimateCache, applyEstimateResult, requestEstimate, getEstimateDurationLabel, showSimulator, simSetSize, simToggleItem, simSetGrade, refreshSim, showFinalConfirmation, completeFinalConsultation, reselectEstimate, returnToEarlierStep, simConfirm, fetchUsage, renderUsageBadge, updateUsageAfterGen, showUpgradeModal, closeGuestPinPanel, closeGuestPinOuter, renderGpinPanel, gpinSetDays, gpinSetUses, issueGuestPin, showGpinResult, copyGpinUrl, generateQR, copyGpinInfo, shareGpin, loadGuestPins, deleteGuestPin, openMenuSheet, closeMenuSheet, closeMenuOuter, openCasesPanel, closeCasesPanel, closeCasesOuter, switchCasesTab, renderCasesTab, renderUploadForm, previewCaseImg, submitCase, renderCasesList, deleteCase, showCases, autoSaveSession, openHistoryPanel, resumeSession, closeHistoryPanel, closeHistory, showQuickForm, render, sendMessage, getMockAgentResponse, callAgent });

@@ -62,24 +62,10 @@ class LocalStackHandlerTest(unittest.TestCase):
         os.environ["TOKEN_SECRET"] = "localstack-test-secret-0123456789abcdef"
         self.handler.UNLIMITED_MODE = False
 
-    def test_verify_pin_and_authenticated_usage(self):
-        self.handler.save({
-            "pk": "PIN#1234",
-            "sk": "PIN",
-            "label": "LocalStack test",
-            "uses": 0,
-            "max_uses": 1,
-            "expires_at": int(time.time()) + 300,
-        })
-        verify_event = {"body": json.dumps({"type": "verify_pin", "pin": "1234"})}
-        verified = self.handler.lambda_handler(verify_event, None)
-        self.assertEqual(verified["statusCode"], 200)
-        token = json.loads(verified["body"])["token"]
-
-        usage_event = {"body": json.dumps({"type": "get_usage", "token": token})}
-        usage = self.handler.lambda_handler(usage_event, None)
-        self.assertEqual(usage["statusCode"], 200)
-        self.assertEqual(json.loads(usage["body"])["limit"], 10)
+    def test_pin_authentication_is_removed(self):
+        event = {"body": json.dumps({"type": "verify_pin", "pin": "1234"})}
+        result = self.handler.lambda_handler(event, None)
+        self.assertEqual(result["statusCode"], 401)
 
     def test_unlimited_mode_reports_unlimited_and_ignores_limit(self):
         previous = self.handler.UNLIMITED_MODE
