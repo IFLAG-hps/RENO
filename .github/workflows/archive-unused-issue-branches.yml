@@ -1,0 +1,65 @@
+name: "ARCHIVE: Unused closed issue branches"
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  archive:
+    name: Archive branches for closed issues
+    if: ${{ github.repository == 'IFLAG-hps/RENO' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan and archive closed issue branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          FORK_REPO_TOKEN: ${{ secrets.FORK_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          test -n "$FORK_REPO_TOKEN"
+          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/DaisukeShirai/RENO.git"
+
+          archive_closed_branches() {
+            local remote="$1"
+            local remote_name="$2"
+            local branches
+
+            branches="$(git ls-remote --heads "$remote" 'refs/heads/[1-9]*-*')"
+            while IFS=$'\t' read -r sha ref; do
+              test -n "${ref:-}" || continue
+              branch="${ref#refs/heads/}"
+
+              if [[ "$branch" =~ ^([1-9][0-9]*)-(.+)$ ]]; then
+                issue_number="${BASH_REMATCH[1]}"
+                issue_name="${BASH_REMATCH[2]}"
+              else
+                continue
+              fi
+
+              issue_state="$(gh issue view "$issue_number" --repo "$GH_REPO" --json state --jq .state 2>/dev/null || true)"
+              if [[ "$issue_state" != "CLOSED" ]]; then
+                echo "Keeping $remote_name/$branch (Issue #$issue_number is ${issue_state:-unavailable})"
+                continue
+              fi
+
+              archive_branch="archive/issue-${issue_number}/${issue_name}"
+              if git ls-remote --exit-code --heads "$remote" "refs/heads/$archive_branch" >/dev/null 2>&1; then
+                echo "Skipping $remote_name/$branch (archive target already exists)"
+                continue
+              fi
+
+              echo "Archiving $remote_name/$branch as $remote_name/$archive_branch"
+              git push "$remote" "refs/heads/$branch:refs/heads/$archive_branch"
+              git push "$remote" --delete "$branch"
+            done <<< "$branches"
+          }
+
+          archive_closed_branches origin origin
+          archive_closed_branches "$FORK_URL" fork

@@ -7,7 +7,10 @@ const files = {
   localstack: '.github/workflows/localstack-test.yml',
   frontend: '.github/workflows/frontend-blue-green.yml',
   sync: '.github/workflows/sync-fork.yml',
-  promote: '.github/workflows/promote-tested-issue-branch.yml'
+  promote: '.github/workflows/promote-tested-issue-branch.yml',
+  archive: '.github/workflows/archive-closed-issue-branches.yml',
+  archiveUnused: '.github/workflows/archive-unused-issue-branches.yml',
+  live: '.github/workflows/live-site-e2e.yml'
 };
 
 const workflows = {};
@@ -61,6 +64,25 @@ assert.match(workflows.promote, /github\.event\.workflow_run\.head_sha/, 'origin
 assert.match(workflows.promote, /contents: write/, 'origin promotion contents write permission is missing');
 assert.match(workflows.promote, /git merge --no-ff "origin\/\$BRANCH"/, 'origin main merge command is missing');
 assert.match(workflows.promote, /HEAD:refs\/heads\/main/, 'origin main push is missing');
+assert.match(workflows.archive, /issues:/, 'closed issue archive trigger is missing');
+assert.match(workflows.archive, /types:\s*\n\s+- closed/, 'closed issue event filter is missing');
+assert.match(workflows.archive, /workflow_dispatch:/, 'manual closed issue archive trigger is missing');
+assert.match(workflows.archive, /issue_number:/, 'manual issue number input is missing');
+assert.match(workflows.archive, /gh issue view/, 'closed issue state check is missing');
+assert.match(workflows.archive, /archive\/issue-\$\{ISSUE_NUMBER\}/, 'issue archive namespace is missing');
+assert.match(workflows.archive, /refs\/heads\/\$archive_branch/, 'archive branch creation is missing');
+assert.match(workflows.archive, /git push \"\$remote\" --delete \"\$branch\"/, 'original branch deletion is missing');
+assert.match(workflows.archive, /DaisukeShirai\/RENO\.git/, 'fork archive target is missing');
+assert.match(workflows.archiveUnused, /schedule:/, 'unused issue branch archive schedule is missing');
+assert.match(workflows.archiveUnused, /refs\/heads\/\[1-9\]\*-\*/, 'issue branch scan filter is missing');
+assert.match(workflows.archiveUnused, /gh issue view/, 'issue state lookup is missing');
+assert.match(workflows.archiveUnused, /issue_state.*CLOSED/, 'closed issue archive gate is missing');
+assert.match(workflows.archiveUnused, /archive\/issue-\$\{issue_number\}/, 'scanned issue archive namespace is missing');
+assert.match(workflows.live, /schedule:/, 'live-site nightly schedule is missing');
+assert.match(workflows.live, /cron: "0 15 \* \* \*"/, 'live-site midnight JST schedule is missing');
+assert.match(workflows.live, /reno\.taskra\.jp/, 'live-site production URL is missing');
+assert.match(workflows.live, /Upload Playwright report/, 'live-site report upload is missing');
+assert.match(workflows.live, /if: always\(\)/, 'live-site report must upload after test failure');
 const samTemplate = await readFile('backend/template.yaml', 'utf8');
 assert.match(samTemplate, /Environment:\r?\n    Type: String/, 'SAM environment parameter is missing');
 assert.match(samTemplate, /reno-mvp-\$\{Environment\}-users/, 'Cognito user pool environment isolation is missing');
