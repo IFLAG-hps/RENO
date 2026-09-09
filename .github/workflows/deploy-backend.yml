@@ -97,7 +97,7 @@ jobs:
           TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           DEMO_PIN: ${{ vars.DEMO_PIN || '1234' }}
-          UNLIMITED_MODE: ${{ vars.UNLIMITED_MODE || 'true' }}
+          UNLIMITED_MODE: ${{ vars.UNLIMITED_MODE || 'false' }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
           SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL || '' }}
           SES_TO_EMAIL: ${{ vars.SES_TO_EMAIL || '' }}

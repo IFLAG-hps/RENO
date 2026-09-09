@@ -85,13 +85,27 @@ class LocalStackHandlerTest(unittest.TestCase):
         previous = self.handler.UNLIMITED_MODE
         try:
             self.handler.UNLIMITED_MODE = True
-            token = self.handler.token_for("unlimited-test")
+            token = self.handler.token_for("unlimited-test", "admin")
             usage = self.handler.lambda_handler({"body": json.dumps({"type": "get_usage", "token": token})}, None)
             payload = json.loads(usage["body"])
             self.assertEqual(usage["statusCode"], 200)
             self.assertEqual(payload["plan"], "unlimited")
             self.assertTrue(payload["unlimited"])
             self.assertIsNone(payload["remaining"])
+        finally:
+            self.handler.UNLIMITED_MODE = previous
+
+    def test_unlimited_mode_is_not_available_to_guest_tokens(self):
+        previous = self.handler.UNLIMITED_MODE
+        try:
+            self.handler.UNLIMITED_MODE = True
+            token = self.handler.token_for("guest-test", "guest")
+            usage = self.handler.lambda_handler({"body": json.dumps({"type": "get_usage", "token": token})}, None)
+            payload = json.loads(usage["body"])
+            self.assertEqual(usage["statusCode"], 200)
+            self.assertEqual(payload["plan"], "standard")
+            self.assertFalse(payload["unlimited"])
+            self.assertEqual(payload["remaining"], 10)
         finally:
             self.handler.UNLIMITED_MODE = previous
 
