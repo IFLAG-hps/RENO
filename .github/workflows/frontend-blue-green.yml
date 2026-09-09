@@ -17,7 +17,7 @@ on:
         type: string
 
 permissions:
-  actions: read
+  actions: write
   contents: read
 
 concurrency:
@@ -26,9 +26,9 @@ concurrency:
 
 jobs:
   release:
-    # The Amplify app is connected to the fork. Keeping this guard prevents an
-    # origin-side branch push from trying to publish to the fork's AWS account.
-    if: github.repository == 'DaisukeShirai/RENO'
+    # Phase 1: release control runs in the upstream repository. Candidate refs
+    # are still pushed to the Amplify-connected repository configured below.
+    if: github.repository == 'IFLAG-hps/RENO'
     name: Deploy candidate, wait for CI, then cut over
     runs-on: ubuntu-latest
     environment: ${{ inputs.target || (github.ref_name == 'main' && 'production' || github.ref_name) }}
@@ -80,12 +80,16 @@ jobs:
             *) echo "The public domain prefix is not mapped to a configured blue/green branch: $ACTIVE_BRANCH"; exit 1 ;;
           esac
 
-          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/main-deploy.yml/dispatches" \
+          RELEASE_ID="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          CI_RESPONSE="$(gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/main-deploy.yml/dispatches" \
             -f ref="$SOURCE_REF" \
             -f "inputs[ref]=$SOURCE_SHA" \
-            -f "inputs[deploy_aws]=false"
+            -f "inputs[release_id]=$RELEASE_ID" \
+            -f "inputs[deploy_aws]=false")"
 
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "ci_run_id=$(jq -r '.workflow_run_id // empty' <<<"$CI_RESPONSE")" >> "$GITHUB_OUTPUT"
           echo "active_branch=$ACTIVE_BRANCH" >> "$GITHUB_OUTPUT"
           echo "candidate_branch=$CANDIDATE_BRANCH" >> "$GITHUB_OUTPUT"
           printf '%s' "$ASSOCIATION" > /tmp/domain-association.json
@@ -93,10 +97,15 @@ jobs:
       - name: Find dispatched CI run
         id: ci
         env:
-          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          CI_RUN_ID: ${{ steps.release.outputs.ci_run_id }}
         run: |
+          if [ -n "$CI_RUN_ID" ]; then
+            echo "run_id=$CI_RUN_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           for _ in {1..30}; do
-            RUN_ID="$(gh run list --workflow main-deploy.yml --event workflow_dispatch --json databaseId,headSha --limit 30 --jq ".[] | select(.headSha == \"$SOURCE_SHA\") | .databaseId" | head -n 1)"
+            RUN_ID="$(gh run list --workflow main-deploy.yml --event workflow_dispatch --json databaseId,displayTitle --limit 30 --jq ".[] | select(.displayTitle == \"CI: $RELEASE_ID\") | .databaseId" | head -n 1)"
             if [ -n "$RUN_ID" ]; then
               echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
               exit 0

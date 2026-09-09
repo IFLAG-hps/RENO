@@ -34,9 +34,18 @@ assert.match(workflows.main, /test_unit_\*\.py/, 'application validation backend
 assert.match(workflows.main, /Run React unit tests/, 'application validation React unit tests are missing');
 assert.match(workflows.main, /npm run test:unit:react/, 'application validation React unit test command is missing');
 assert.match(workflows.main, /description: Git ref to validate/, 'application validation manual ref input is missing');
+assert.match(workflows.main, /inputs\.release_id \|\| github\.sha/, 'application validation release run name is missing');
+assert.match(workflows.main, /cache: pip/, 'application validation pip cache is missing');
+assert.match(workflows.main, /cache: npm/, 'application validation npm cache is missing');
+assert.match(workflows.main, /Cache Playwright browsers/, 'application validation Playwright cache is missing');
+assert.match(workflows.main, /~\/\.cache\/ms-playwright/, 'application validation Playwright cache path is missing');
+assert.match(workflows.localstack, /cache: pip/, 'LocalStack pip cache is missing');
 assert.match(workflows.frontend, /DEPLOY: Blue\/green frontend/, 'blue/green frontend workflow is missing');
 assert.match(workflows.frontend, /aws amplify start-job/, 'blue/green candidate deployment is missing');
 assert.match(workflows.frontend, /gh run view/, 'blue/green CI polling is missing');
+assert.match(workflows.frontend, /actions: write/, 'blue/green workflow dispatch permission is missing');
+assert.match(workflows.frontend, /workflow_run_id/, 'blue/green dispatched CI run ID is missing');
+assert.match(workflows.frontend, /RELEASE_ID/, 'blue/green CI fallback correlation is missing');
 assert.match(workflows.frontend, /aws amplify update-domain-association/, 'blue/green domain cutover is missing');
 assert.match(workflows.frontend, /Restoring the previous public branch/, 'blue/green rollback is missing');
 assert.match(workflows.sync, /github\.repository == 'IFLAG-hps\/RENO'/, 'fork sync source repository guard is missing');

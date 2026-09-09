@@ -53,6 +53,6 @@ GitHub の `dev`、`staging`、`production` Environment に、次の値を登録
 
 ## 実行とロールバック
 
-Fork側の `dev`、`staging`、`main` へのpushで自動実行する。手動実行時は `DEPLOY: Blue/green frontend` から環境とGit refを指定する。
+第1段階では、上流の `IFLAG-hps/RENO` の `dev`、`staging`、`main` へのpushで自動実行する。候補ブランチだけは `AMPLIFY_RELEASE_REPOSITORY`（通常はAmplify接続先のfork）へ反映する。Fork側へリリース制御を移す際は、ワークフローのリポジトリガードを切り替える。手動実行時は `DEPLOY: Blue/green frontend` から環境とGit refを指定する。
 
 CI失敗・候補ビルド失敗時は、候補が残っても公開ドメインは現行色を向いたままである。ドメイン切替後の確認に失敗した場合は、ワークフローが保存済みの関連付けへ戻す。アプリケーションコードをrevertする必要はない。
