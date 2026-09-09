@@ -568,8 +568,35 @@ function applySession(data) {
     document.getElementById('userAvatarImg').src = sessionAvatar || '';
     document.getElementById('userMenuEmail').textContent = sessionEmail || '';
   }
+  setupHeaderActions();
   if (!chatStarted) initChat();
   if (location.search) { try { window.history.replaceState(null, '', location.pathname); } catch (e) {} }
+}
+
+function setupHeaderActions() {
+  const headerRight = document.querySelector('#header .h-right');
+  if (!headerRight) return;
+
+  const resetButton = document.getElementById('chatResetBtn');
+  if (resetButton && resetButton.parentElement !== headerRight) {
+    resetButton.classList.remove('h-menu-btn');
+    resetButton.classList.add('header-action-btn');
+    headerRight.insertBefore(resetButton, headerRight.querySelector('#qrBtn') || headerRight.lastElementChild);
+  }
+
+  const qrButton = document.getElementById('qrBtn');
+  if (qrButton) qrButton.style.display = 'flex';
+
+  if (!document.getElementById('headerLogoutBtn')) {
+    const logoutButton = document.createElement('button');
+    logoutButton.id = 'headerLogoutBtn';
+    logoutButton.type = 'button';
+    logoutButton.className = 'header-action-btn header-logout-btn';
+    logoutButton.title = 'ログアウト';
+    logoutButton.textContent = 'ログアウト';
+    logoutButton.addEventListener('click', logoutApp);
+    headerRight.insertBefore(logoutButton, headerRight.querySelector('#qrBtn') || headerRight.lastElementChild);
+  }
 }
 
 function toggleUserMenu() {
