@@ -940,9 +940,24 @@ def lambda_handler(event, context):
             if item.get("image_key"): S3.delete_object(Bucket=os.environ["ASSET_BUCKET"], Key=item["image_key"])
             return response(200, {"ok": True})
         if typ == "handoff":
+            request_id = str(body.get("requestId", "")).strip()[:120]
+            if not request_id:
+                return response(400, {"error": "requestId is required"})
+            handoff_key = {"pk": "USER#" + user["sub"], "sk": "HANDOFF#" + request_id}
+            existing_handoff = TABLE.get_item(Key=handoff_key).get("Item")
+            if existing_handoff and existing_handoff.get("status") == "sent":
+                return response(200, {"ok": True, "status": "received", "duplicate": True})
+
+            # 送信前に入力を保存する。通知失敗時も同じrequestIdで再試行できる。
+            save({**handoff_key, "data": body.get("data", {}), "status": "pending", "created_at": int(time.time())})
             if os.environ.get("SES_FROM_EMAIL") and os.environ.get("SES_TO_EMAIL"):
-                SES.send_email(Source=os.environ["SES_FROM_EMAIL"], Destination={"ToAddresses": [os.environ["SES_TO_EMAIL"]]}, Message={"Subject": {"Data": "RENO相談受付"}, "Body": {"Text": {"Data": json.dumps(body.get("data", {}), ensure_ascii=False)}}})
-            save({"pk": "USER#" + user["sub"], "sk": "HANDOFF#" + str(time.time_ns()), "data": body.get("data", {}), "created_at": int(time.time())})
+                try:
+                    SES.send_email(Source=os.environ["SES_FROM_EMAIL"], Destination={"ToAddresses": [os.environ["SES_TO_EMAIL"]]}, Message={"Subject": {"Data": "RENO相談受付"}, "Body": {"Text": {"Data": json.dumps(body.get("data", {}), ensure_ascii=False)}}})
+                except Exception as exc:
+                    TABLE.update_item(Key=handoff_key, UpdateExpression="SET #status = :status, error = :error, updated_at = :now", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "pending", ":error": str(exc)[:500], ":now": int(time.time())})
+                    print(json.dumps({"handoff_notification_error": str(exc), "request_id": request_id}, ensure_ascii=False))
+                    return response(503, {"error": "notification temporarily unavailable", "retryable": True})
+            TABLE.update_item(Key=handoff_key, UpdateExpression="SET #status = :status, updated_at = :now", ExpressionAttributeNames={"#status": "status"}, ExpressionAttributeValues={":status": "sent", ":now": int(time.time())})
             return response(200, {"ok": True, "status": "received"})
         return response(400, {"error": "unsupported type"})
     except Exception as exc:

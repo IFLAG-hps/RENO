@@ -1432,6 +1432,53 @@ function removeTyping() {
   if (el) el.remove();
 }
 
+function addRetryButton(label, action, key = 'retry') {
+  const messages = document.querySelectorAll('#chat .msg.agent');
+  const message = messages[messages.length - 1];
+  const bubble = message?.querySelector('.bubble');
+  if (!bubble || bubble.querySelector(`[data-action="${key}"]`)) return;
+  const button = document.createElement('button');
+  button.className = 'chip';
+  button.type = 'button';
+  button.dataset.action = key;
+  button.textContent = label;
+  button.onclick = action;
+  bubble.appendChild(button);
+}
+
+function showUploadRetry(file, message) {
+  window._pendingPhotoFile = file;
+  const uploadMessage = document.getElementById('upload-msg');
+  if (uploadMessage) {
+    uploadMessage.querySelector('[data-upload-error]')?.remove();
+    const error = document.createElement('div');
+    error.dataset.uploadError = 'true';
+    error.style.cssText = 'color:#b42318;font-size:11px;margin-top:8px;line-height:1.5;';
+    error.textContent = message;
+    uploadMessage.querySelector('.bubble')?.appendChild(error);
+    addRetryButton('写真を再送する', retryPhotoUpload, 'photo-upload-retry');
+  } else {
+    addAgentMessage(message);
+    addRetryButton('写真を再送する', retryPhotoUpload, 'photo-upload-retry');
+  }
+}
+
+async function retryPhotoUpload() {
+  const file = window._pendingPhotoFile;
+  if (!file) return;
+  try {
+    await persistPhotoUpload(file);
+    window._pendingPhotoFile = null;
+    document.querySelector('[data-action="photo-upload-retry"]')?.remove();
+    document.querySelector('[data-upload-error]')?.remove();
+    const beforeURL = URL.createObjectURL(file);
+    document.getElementById('upload-msg')?.remove();
+    showIdealImageCard(file, beforeURL, window._pendingUploadPrompt || '');
+  } catch (error) {
+    showUploadRetry(file, `写真の保存に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
+  }
+}
+
 function showUploadCard(prompt) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
@@ -1467,10 +1514,11 @@ async function useSampleImage(idx, prompt = window._pendingUploadPrompt || '') {
   addUserMessage('📷 サンプル画像（' + sample.label + '）を選択しました');
 
   // サンプル画像をFileオブジェクトに変換してからglobalに保持
+  let file;
   try {
     const res0 = await fetch(sample.src);
     const blob = await res0.blob();
-    const file = new File([blob], 'sample.jpg', { type: 'image/jpeg' });
+    file = new File([blob], 'sample.jpg', { type: 'image/jpeg' });
     window._beforeFile = file;
     window._beforeURL = beforeURL;
     window._genPrompt = prompt;
@@ -1479,6 +1527,8 @@ async function useSampleImage(idx, prompt = window._pendingUploadPrompt || '') {
     window._beforeFile = null;
     window._beforeURL = beforeURL;
     window._genPrompt = prompt;
+    showUploadRetry(file, `写真の保存に失敗しました。${e.message || '時間をおいて再試行してください。'}`);
+    return;
   }
 
   // 理想イメージカードを表示（handlePhotoと同じフロー）
@@ -1490,7 +1540,7 @@ async function handlePhoto(event, prompt = window._pendingUploadPrompt || '') {
   try {
     await persistPhotoUpload(file);
   } catch (e) {
-    alert('写真の保存に失敗しました: ' + e.message);
+    showUploadRetry(file, `写真の保存に失敗しました。${e.message || '時間をおいて再試行してください。'}`);
     return;
   }
   const beforeURL = URL.createObjectURL(file);
@@ -1625,6 +1675,7 @@ async function startPhotoDiagnosis() {
       return;
     }
     addAgentMessage(`写真の分析に失敗しました。${error.message || '時間をおいて再試行してください。'}`);
+    addRetryButton('もう一度分析する', startPhotoDiagnosis, 'photo-analysis-retry');
   }
 }
 
@@ -1726,7 +1777,7 @@ function handoffToStaff(context) {
   document.getElementById('handoff-name')?.focus();
 }
 
-function submitHandoff() {
+async function submitHandoff() {
   const name = document.getElementById('handoff-name')?.value.trim() || '';
   const contact = document.getElementById('handoff-contact')?.value.trim() || '';
   const error = document.getElementById('handoff-error');
@@ -1735,12 +1786,41 @@ function submitHandoff() {
     document.getElementById(!name ? 'handoff-name' : 'handoff-contact')?.focus();
     return;
   }
-  const card = document.getElementById('handoff-msg');
-  if (card) card.remove();
-  addUserMessage('相談を申し込みました');
-  addAgentMessage(`ありがとうございます、${name}さん。担当者への相談を受け付けました。${contact}へ連絡する想定です。`, null, null, ['相談内容を続ける', '別の部屋を相談する']);
-  clearDraftCache();
-  finalizationState = 'completed';
+  if (window._handoffSubmitting) return;
+  window._handoffSubmitting = true;
+  const button = document.querySelector('#handoff-msg .handoff-submit');
+  if (button) button.disabled = true;
+  const requestId = window._handoffRequestId || (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  window._handoffRequestId = requestId;
+  try {
+    const sessionId = await ensureSession();
+    const response = await fetchWithTimeout(EDGE_URL, {
+      method: 'POST',
+      headers: { ...EDGE_HEADERS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: sessionToken,
+        type: 'handoff',
+        requestId,
+        data: { name, contact, context: getHandoffSummary('最終確定済み').join('\n'), sessionId },
+      }),
+    }, 30000);
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || '通知の送信に失敗しました');
+    document.getElementById('handoff-msg')?.remove();
+    addUserMessage('相談を申し込みました');
+    addAgentMessage(`ありがとうございます、${name}さん。担当者への相談を受け付けました。${contact}へ連絡します。`, null, null, ['相談内容を続ける', '別の部屋を相談する']);
+    clearDraftCache();
+    finalizationState = 'completed';
+  } catch (submitError) {
+    if (error) {
+      error.textContent = `通知の送信に失敗しました。入力内容は保持されています。${submitError.message || '時間をおいて再試行してください。'}`;
+      error.style.display = 'block';
+    }
+    addRetryButton('通知を再送する', submitHandoff, 'handoff-retry');
+  } finally {
+    window._handoffSubmitting = false;
+    if (button) button.disabled = false;
+  }
 }
 
 function startProposalFlow() {
@@ -1861,7 +1941,8 @@ async function generateWithFiles(beforeFile, idealFile) {
         ['もう一度試す', '別の箇所も試す', 'スタイルを変えてみる', '概算を見る', '提案書を作成']
       );
     } else {
-      addAgentMessage(e.isTimeout ? timeoutMsg : '現在AIイメージ生成をご利用いただけません。参考イメージを確認するか、別の方法で相談を続けられます。', null, null, ['もう一度試す', '概算を見る', '担当者に相談', '相談内容を続ける']);
+      addAgentMessage(e.isTimeout ? timeoutMsg : '現在AIイメージ生成をご利用いただけません。参考イメージを確認するか、別の方法で相談を続けられます。', null, null, ['概算を見る', '担当者に相談', '相談内容を続ける']);
+      addRetryButton('もう一度生成する', () => generateWithFiles(window._beforeFile, idealFile), 'image-generation-retry');
     }
   }
 }
@@ -3704,6 +3785,7 @@ async function callAgent() {
     removeTyping();
     addAgentMessage('一時的に応答を取得できませんでした。相談を続けるか、もう一度送信できます。', null, null,
       ['もう一度送る', '担当者に相談', '相談内容を続ける']);
+    addRetryButton('もう一度送る', retryLastAgentCall, 'chat-retry');
     addRollbackButton();
   }
   persistChatHistory();
