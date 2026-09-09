@@ -54,7 +54,7 @@ git push -u origin 30-実装-相談セッション履歴api
 - Fork先のIssueブランチはFork元の内容で強制同期される。Fork先で直接コミットすると失われる。
 - Fork先の`dev`、`staging`、`main`へのpushで、それぞれ`reno-mvp-dev`、`reno-mvp-staging`、`reno-mvp-prod`を自動デプロイする。
 - GitHub Environmentの承認ルールを設定した場合、バックエンドデプロイは承認待ちで停止する。PR承認だけで本番公開したい場合は、`production` Environmentに追加承認を設定しない。
-- Amplifyのブランチ自動ビルドとバックエンドデプロイは並行して動く。API変更は後方互換性を保つか、段階的なリリースにする。
+- Amplifyの候補ビルドとCIは並行して動く。公開ドメインは両方が成功した場合だけblue / greenで切り替える。API変更は後方互換性を保つか、段階的なリリースにする。
 
 ## Phaseとの関係
 
@@ -69,5 +69,5 @@ Phaseは機能範囲、Fork先のブランチは環境昇格の経路である�
 ## ロールバック
 
 - `dev`／`staging`：問題のPRをrevertし、対象ブランチへマージする。
-- `main`：公開済みPRをrevertし、Fork先`main`へマージする。Amplifyと`reno-mvp-prod`が再デプロイされる。
+- `main`：候補またはCIが失敗した場合は公開色を切り替えない。切替後の確認が失敗した場合はワークフローが直前の色に戻す。コードを戻す必要がある場合は、公開済みPRをrevertしてFork先`main`へマージする。
 - データ形式を破壊する変更は、先に互換性のあるスキーマ・移行処理を入れ、ロールバック手順をPRに記載する。
