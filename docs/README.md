@@ -21,6 +21,7 @@
 - [商品方針](./product/product-direction.md)
 - [MVP提案](./product/mvp-proposal.md)
 - [API仕様](./ai/api-specification.md)
+- [共通エラー処理・認証認可の完了条件](./ai/common-error-handling-acceptance-criteria.md)
 - [写真診断フロー](./ai/image-diagnosis-workflow.md)
 - [完成予想図メモ](./ai/image-generation-memo.md)
 - [運用費用・損益分岐点](./operations/operating-cost-and-break-even-memo.md)
