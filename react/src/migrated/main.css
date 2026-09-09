@@ -556,7 +556,7 @@ html.oauth-pending #oauthLoadingOverlay{display:flex;}
 .chat-reset-btn{width:auto !important;padding:0 9px;font-size:11px;gap:5px;color:var(--text2);white-space:nowrap;}
 .chat-reset-btn:hover{color:var(--red);border-color:rgba(176,64,64,0.35);background:#fff8f7;}
 .inputbar-row{display:flex;gap:10px;align-items:flex-end;max-width:880px;margin:0 auto;}
-.h-right > .h-menu-btn{display:none !important;}
+#inputbarTools .inputbar-actions > .h-menu-btn:last-child{display:none;}
 #userInput{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;padding:10px 14px;outline:none;resize:none;max-height:120px;font-family:inherit;line-height:1.5;transition:border-color 0.2s;min-height:42px;}
 #userInput:focus{border-color:var(--gold);}
 #sendBtn{background:var(--gold-bg);border:1px solid rgba(160,120,56,0.3);border-radius:7px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;flex-shrink:0;color:var(--gold);}
