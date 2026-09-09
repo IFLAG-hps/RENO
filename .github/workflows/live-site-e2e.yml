@@ -1,12 +1,15 @@
 name: "E2E: Verify live site"
 
 on:
+  schedule:
+    # 00:00 JST (15:00 UTC)
+    - cron: "0 15 * * *"
   workflow_dispatch:
     inputs:
       site_url:
         description: "確認対象の実サイトURL"
-        required: true
-        default: "https://dev.d2jusc0nd2q8bh.amplifyapp.com/"
+        required: false
+        default: "https://reno.taskra.jp/"
         type: string
 
 permissions:
@@ -18,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      E2E_BASE_URL: ${{ inputs.site_url }}
+      E2E_BASE_URL: ${{ inputs.site_url || 'https://reno.taskra.jp/' }}
       E2E_USE_REAL_API: "true"
 
     steps:
@@ -49,3 +52,4 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: ignore
+          retention-days: 30

@@ -1,0 +1,79 @@
+name: "ARCHIVE: Closed issue branches"
+
+on:
+  issues:
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number whose closed branches should be archived
+        required: true
+        type: number
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    name: Archive branches for closed issue
+    if: ${{ github.repository == 'IFLAG-hps/RENO' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive matching branches in origin and fork
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          FORK_REPO_TOKEN: ${{ secrets.FORK_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          test "$ISSUE_NUMBER" -gt 0
+          test -n "$FORK_REPO_TOKEN"
+
+          ISSUE_STATE="$(gh issue view "$ISSUE_NUMBER" --json state --jq .state)"
+          test "$ISSUE_STATE" = CLOSED
+
+          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/DaisukeShirai/RENO.git"
+          ARCHIVE_PREFIX="archive/issue-${ISSUE_NUMBER}/"
+
+          check_archive_targets() {
+            local remote="$1"
+            local remote_name="$2"
+            local branches
+
+            branches="$(git ls-remote --heads "$remote" "refs/heads/${ISSUE_NUMBER}-*")"
+            while IFS=$'\t' read -r sha ref; do
+              test -n "${ref:-}" || continue
+              branch="${ref#refs/heads/}"
+              archive_branch="${ARCHIVE_PREFIX}${branch#${ISSUE_NUMBER}-}"
+
+              if git ls-remote --exit-code --heads "$remote" "refs/heads/$archive_branch" >/dev/null 2>&1; then
+                echo "Archive target already exists on $remote_name: $archive_branch" >&2
+                exit 1
+              fi
+            done <<< "$branches"
+          }
+
+          archive_remote() {
+            local remote="$1"
+            local remote_name="$2"
+            local branches
+
+            branches="$(git ls-remote --heads "$remote" "refs/heads/${ISSUE_NUMBER}-*")"
+            while IFS=$'\t' read -r sha ref; do
+              test -n "${ref:-}" || continue
+              branch="${ref#refs/heads/}"
+              archive_branch="${ARCHIVE_PREFIX}${branch#${ISSUE_NUMBER}-}"
+
+              echo "Archiving $remote_name/$branch as $remote_name/$archive_branch"
+              git push "$remote" "refs/heads/$branch:refs/heads/$archive_branch"
+              git push "$remote" --delete "$branch"
+            done <<< "$branches"
+          }
+
+          check_archive_targets origin origin
+          check_archive_targets "$FORK_URL" fork
+          archive_remote origin origin
+          archive_remote "$FORK_URL" fork
