@@ -14,7 +14,7 @@
 
 ## GitHub Environments
 
-Fork先リポジトリ（`DaisukeShirai/RENO`）の **Settings > Environments** で、次の3環境を作成する。
+Fork先リポジトリ（`IFG-IP/RENO`）の **Settings > Environments** で、次の3環境を作成する。
 
 | Environment | デプロイ元ブランチ | 承認設定 |
 | --- | --- | --- |

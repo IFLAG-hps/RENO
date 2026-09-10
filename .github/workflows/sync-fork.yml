@@ -30,5 +30,5 @@ jobs:
           test -n "$FORK_REPO_TOKEN"
           BRANCH="${{ github.ref_name }}"
           case "$BRANCH" in [1-9]*-*) ;; *) echo "Unexpected branch: $BRANCH"; exit 1 ;; esac
-          git push "https://x-access-token:${FORK_REPO_TOKEN}@github.com/DaisukeShirai/RENO.git" \
+          git push "https://x-access-token:${FORK_REPO_TOKEN}@github.com/IFG-IP/RENO.git" \
             --force "HEAD:refs/heads/$BRANCH"

@@ -2,7 +2,7 @@
 
 ## 目的
 
-Fork元（`IFLAG-hps/RENO`）の`main`は、過去の動作デモ完成版とCI設定を保持するアーカイブとして固定する。実装、レビュー、環境昇格、公開は、Amplifyへの接続権限を持つFork先（`DaisukeShirai/RENO`）を正本として行う。
+Fork元（`IFLAG-hps/RENO`）の`main`は、過去の動作デモ完成版とCI設定を保持するアーカイブとして固定する。実装、レビュー、環境昇格、公開は、Amplifyへの接続権限を持つFork先（`IFG-IP/RENO`）を正本として行う。
 
 ## リポジトリとブランチの役割
 

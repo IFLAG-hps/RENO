@@ -46,7 +46,7 @@ GitHub の `dev`、`staging`、`production` Environment に、次の値を登録
 | Variable | `AMPLIFY_DOMAIN_PREFIX` | 本番ルートは空文字、受入環境なら `staging` など |
 | Variable | `AMPLIFY_BLUE_BRANCH` | 例: `release-blue` |
 | Variable | `AMPLIFY_GREEN_BRANCH` | 例: `release-green` |
-| Variable | `AMPLIFY_RELEASE_REPOSITORY` | Amplify接続先。例: `DaisukeShirai/RENO` |
+| Variable | `AMPLIFY_RELEASE_REPOSITORY` | Amplify接続先。例: `IFG-IP/RENO` |
 | Secret | `AMPLIFY_RELEASE_TOKEN` | 上記リポジトリの候補ブランチを更新できる最小権限トークン |
 
 既存の `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` を使う場合、AWS側の実行ユーザーには少なくとも `amplify:GetDomainAssociation`、`amplify:UpdateDomainAssociation`、`amplify:UpdateBranch`、`amplify:StartJob`、`amplify:GetJob` が必要になる。

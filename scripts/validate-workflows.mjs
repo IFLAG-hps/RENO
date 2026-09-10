@@ -53,7 +53,7 @@ assert.match(workflows.frontend, /aws amplify update-domain-association/, 'blue/
 assert.match(workflows.frontend, /Restoring the previous public branch/, 'blue/green rollback is missing');
 assert.match(workflows.sync, /github\.repository == 'IFLAG-hps\/RENO'/, 'fork sync source repository guard is missing');
 assert.match(workflows.sync, /secrets\.FORK_REPO_TOKEN/, 'fork sync token configuration is missing');
-assert.match(workflows.sync, /DaisukeShirai\/RENO\.git/, 'fork repository target is missing');
+assert.match(workflows.sync, /IFG-IP\/RENO\.git/, 'fork repository target is missing');
 assert.match(workflows.sync, /\[1-9\]\*-\*/, 'fork sync issue branch allow-list is missing');
 assert.match(workflows.sync, /--force "HEAD:refs\/heads\/\$BRANCH"/, 'fork sync issue mirror update is missing');
 assert.match(workflows.promote, /workflow_run:/, 'origin promotion workflow trigger is missing');
@@ -72,7 +72,7 @@ assert.match(workflows.archive, /gh issue view/, 'closed issue state check is mi
 assert.match(workflows.archive, /archive\/issue-\$\{ISSUE_NUMBER\}/, 'issue archive namespace is missing');
 assert.match(workflows.archive, /refs\/heads\/\$archive_branch/, 'archive branch creation is missing');
 assert.match(workflows.archive, /git push \"\$remote\" --delete \"\$branch\"/, 'original branch deletion is missing');
-assert.match(workflows.archive, /DaisukeShirai\/RENO\.git/, 'fork archive target is missing');
+assert.match(workflows.archive, /IFG-IP\/RENO\.git/, 'fork archive target is missing');
 assert.match(workflows.archiveUnused, /schedule:/, 'unused issue branch archive schedule is missing');
 assert.match(workflows.archiveUnused, /refs\/heads\/\[1-9\]\*-\*/, 'issue branch scan filter is missing');
 assert.match(workflows.archiveUnused, /gh issue view/, 'issue state lookup is missing');

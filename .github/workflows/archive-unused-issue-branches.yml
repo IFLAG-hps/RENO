@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
 
           test -n "$FORK_REPO_TOKEN"
-          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/DaisukeShirai/RENO.git"
+          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/IFG-IP/RENO.git"
 
           archive_closed_branches() {
             local remote="$1"

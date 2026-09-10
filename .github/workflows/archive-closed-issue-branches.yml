@@ -35,7 +35,7 @@ jobs:
           ISSUE_STATE="$(gh issue view "$ISSUE_NUMBER" --json state --jq .state)"
           test "$ISSUE_STATE" = CLOSED
 
-          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/DaisukeShirai/RENO.git"
+          FORK_URL="https://x-access-token:${FORK_REPO_TOKEN}@github.com/IFG-IP/RENO.git"
           ARCHIVE_PREFIX="archive/issue-${ISSUE_NUMBER}/"
 
           check_archive_targets() {

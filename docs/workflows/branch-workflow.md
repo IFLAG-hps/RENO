@@ -7,7 +7,7 @@
 リモート名は次の意味です。
 
 - `origin`: 開発元 `IFLAG-hps/RENO`
-- `fork`: fork 先 `DaisukeShirai/RENO`
+- `fork`: fork 先 `IFG-IP/RENO`
 - Issueブランチ: `[Issue番号]-<内容>`（例：`30-実装-相談セッション履歴api`）
 
 ## ブランチ間の関係
@@ -19,7 +19,7 @@ flowchart LR
     M[fork側 dev<br/>開発環境の統合先]
     T[CI / E2E / SAM検証<br/>devへのPR]
     S[sync-fork.yml<br/>originのpushで実行]
-    F[fork側 Issueブランチ<br/>DaisukeShirai/RENO]
+    F[fork側 Issueブランチ<br/>IFG-IP/RENO]
     A[Amplify Hosting<br/>dev / staging / main を公開]
 
     I -->|push| PR
@@ -46,7 +46,7 @@ flowchart TB
         OM[main]
     end
 
-    subgraph FORK[fork: DaisukeShirai/RENO]
+    subgraph FORK[fork: IFG-IP/RENO]
         FI[同名Issueブランチ]
         FD[dev]
         FS[staging]

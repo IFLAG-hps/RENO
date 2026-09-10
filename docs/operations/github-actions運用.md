@@ -51,7 +51,7 @@ Amplifyの非稼働色へ候補をデプロイしながら、`main-deploy.yml` �
 
 ### `sync-fork.yml`
 
-`main-deploy.yml`のテストが成功した後に自動実行し、テスト済みの`main`を`DaisukeShirai/RENO/main`へ反映します。Amplifyはfork側の`main`を参照するため、この反映を起点にAmplifyがビルド・公開します。
+`main-deploy.yml`のテストが成功した後に自動実行し、テスト済みの`main`を`IFG-IP/RENO/main`へ反映します。Amplifyはfork側の`main`を参照するため、この反映を起点にAmplifyがビルド・公開します。
 
 実行には、上流リポジトリのActions Secret `FORK_REPO_TOKEN` が必要です。トークンにはforkリポジトリの`main`へのcontents書き込み権限を付与します。
 
@@ -64,7 +64,7 @@ Amplifyの非稼働色へ候補をデプロイしながら、`main-deploy.yml` �
 1. 作業ブランチを作成し、作業ブランチ上で編集する。
 2. 変更内容を確認し、プロジェクトの`main`ブランチへマージする。
 3. `main`の状態でローカルテストを実行する。
-4. テスト成功後、`DaisukeShirai/RENO`の`main`へマージまたはpushする。
+4. テスト成功後、`IFG-IP/RENO`の`main`へマージまたはpushする。
 5. `DEPLOY: Blue/green frontend` の成功と公開URLを確認する。
 
 Amplifyはfork側の環境ブランチをリリースの入力として使いますが、公開ドメインは候補のテスト成功後だけ切り替えます。GitHub Pages用のworkflowは使用しません。
